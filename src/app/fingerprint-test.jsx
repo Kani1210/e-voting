@@ -3,90 +3,85 @@
 import { useEffect, useState } from "react";
 import Script from "next/script";
 
-export default function IrisAutoDetect() {
+export default function FingerprintTest() {
   const [output, setOutput] = useState(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Checking...");
   const [loading, setLoading] = useState(false);
 
-  const log = (data) => setOutput(data);
+  const log = (data) => {
+    setOutput(data);
+  };
 
-  const waitForSDK = () =>
-    new Promise((resolve) => {
-      const interval = setInterval(() => {
-        if (window.GetMarvisAuthInfo || window.CaptureIris) {
-          clearInterval(interval);
-          resolve(true);
-        }
-      }, 200);
-    });
-
-  const detectIrisDevice = async () => {
+  /* 🟢 AUTO INIT + CHECK */
+  const autoDetectDevice = async () => {
     try {
       setLoading(true);
 
+      // Wait until SDK is available
+      const waitForSDK = () =>
+        new Promise((resolve) => {
+          const interval = setInterval(() => {
+            if (window.InitDevice && window.IsDeviceConnected) {
+              clearInterval(interval);
+              resolve(true);
+            }
+          }, 200);
+        });
+
       await waitForSDK();
 
-      // 🔥 IRIS DEVICE CHECK (REAL METHOD)
-      const res = window.GetMarvisAuthInfo
-        ? window.GetMarvisAuthInfo()
-        : null;
+      // 1️⃣ INIT DEVICE
+      const initRes = window.InitDevice("WEB_CLIENT", "12345");
 
-      let data = res;
+      // 2️⃣ CHECK DEVICE
+      const checkRes = window.IsDeviceConnected("WEB_CLIENT");
 
-      if (typeof res === "string") {
-        try {
-          data = JSON.parse(res);
-        } catch {
-          data = { raw: res };
-        }
-      }
-
-      console.log("IRIS DEVICE RESPONSE:", data);
-
-      // ✔ REAL IRIS LOGIC (based on your SDK)
       const isConnected =
-        data?.httpStaus === true ||
-        data?.ErrorCode === "-2014" ||
-        data?.ErrorDescription?.includes("Initialized");
+        checkRes === true ||
+        checkRes === "true" ||
+        checkRes === 1 ||
+        checkRes === "1";
 
-      setDeviceStatus(
-        isConnected ? "Iris Device Connected ✔" : "Iris Not Found ❌"
-      );
+      setDeviceStatus(isConnected ? "Device Connected ✔" : "Device Not Found ❌");
 
       log({
-        action: "IRIS AUTO DETECT",
-        raw: res,
-        parsed: data,
-        status: isConnected,
+        action: "AUTO DETECT",
+        init: initRes,
+        check: checkRes,
+        status: isConnected
       });
+
     } catch (err) {
-      setDeviceStatus("Error detecting iris ❌");
+      setDeviceStatus("Error detecting device ❌");
       log({ error: err.message });
     } finally {
       setLoading(false);
     }
   };
 
+  /* 🔥 RUN ON LOAD */
   useEffect(() => {
     if (sdkReady) {
-      detectIrisDevice();
+      autoDetectDevice();
     }
   }, [sdkReady]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
 
+      {/* jQuery */}
       <Script
         src="https://code.jquery.com/jquery-3.6.0.min.js"
         strategy="beforeInteractive"
       />
 
+      {/* SDK */}
       <Script
-        src="/marvisauth.js"
+        src="/morfinauth.js"
         strategy="afterInteractive"
         onLoad={() => {
-          console.log("IRIS SDK Loaded ✔");
+          console.log("SDK Loaded ✔");
           setSdkReady(true);
         }}
       />
@@ -94,7 +89,7 @@ export default function IrisAutoDetect() {
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
 
         <h1 className="text-2xl font-bold mb-4">
-          👁 Iris Auto Detect System
+          🧬 Fingerprint Auto Detect
         </h1>
 
         <p className="text-sm mb-2 text-gray-500">
@@ -105,17 +100,17 @@ export default function IrisAutoDetect() {
           Device Status: {deviceStatus}
         </p>
 
+        {/* OUTPUT */}
         <div className="bg-black text-green-400 p-3 rounded h-72 overflow-auto text-xs">
-          {output
-            ? JSON.stringify(output, null, 2)
-            : "Waiting for iris detection..."}
+          {output ? JSON.stringify(output, null, 2) : "Waiting for detection..."}
         </div>
 
         {loading && (
           <p className="text-center text-gray-500 mt-2 animate-pulse">
-            Detecting iris device...
+            Detecting fingerprint device...
           </p>
         )}
+
       </div>
     </div>
   );
