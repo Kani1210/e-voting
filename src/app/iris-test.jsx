@@ -2,32 +2,35 @@
 
 import { useEffect, useState } from "react";
 import Script from "next/script";
+import { addIris } from "@/services/userService";
 
 export default function IrisAutoDetect() {
   const [output, setOutput] = useState(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [deviceStatus, setDeviceStatus] = useState("Checking...");
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const log = (data) => setOutput(data);
 
+  /* ---------------- WAIT FOR SDK ---------------- */
   const waitForSDK = () =>
     new Promise((resolve) => {
       const interval = setInterval(() => {
-        if (window.GetMarvisAuthInfo || window.CaptureIris) {
+        if (window.GetMarvisAuthInfo) {
           clearInterval(interval);
           resolve(true);
         }
       }, 200);
     });
 
+  /* ---------------- IRIS DETECT + SAVE ---------------- */
   const detectIrisDevice = async () => {
     try {
       setLoading(true);
 
       await waitForSDK();
 
-      // 🔥 IRIS DEVICE CHECK (REAL METHOD)
       const res = window.GetMarvisAuthInfo
         ? window.GetMarvisAuthInfo()
         : null;
@@ -42,9 +45,8 @@ export default function IrisAutoDetect() {
         }
       }
 
-      console.log("IRIS DEVICE RESPONSE:", data);
+      console.log("IRIS RESPONSE:", data);
 
-      // ✔ REAL IRIS LOGIC (based on your SDK)
       const isConnected =
         data?.httpStaus === true ||
         data?.ErrorCode === "-2014" ||
@@ -60,6 +62,24 @@ export default function IrisAutoDetect() {
         parsed: data,
         status: isConnected,
       });
+
+      /* ---------------- SAVE TO BACKEND ---------------- */
+      if (isConnected) {
+        const userId = localStorage.getItem("userId");
+
+        if (!userId) {
+          console.log("❌ userId not found");
+          return;
+        }
+
+        const response = await addIris({
+          userId: userId,
+          irisTemplate: JSON.stringify(data),
+        });
+
+        console.log("✔ SAVED TO DB:", response);
+        setSaved(true);
+      }
     } catch (err) {
       setDeviceStatus("Error detecting iris ❌");
       log({ error: err.message });
@@ -68,6 +88,7 @@ export default function IrisAutoDetect() {
     }
   };
 
+  /* ---------------- AUTO RUN ---------------- */
   useEffect(() => {
     if (sdkReady) {
       detectIrisDevice();
@@ -77,6 +98,7 @@ export default function IrisAutoDetect() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
 
+      {/* SDK LOAD */}
       <Script
         src="https://code.jquery.com/jquery-3.6.0.min.js"
         strategy="beforeInteractive"
@@ -91,6 +113,7 @@ export default function IrisAutoDetect() {
         }}
       />
 
+      {/* UI BOX */}
       <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
 
         <h1 className="text-2xl font-bold mb-4">
@@ -101,10 +124,17 @@ export default function IrisAutoDetect() {
           SDK: {sdkReady ? "Ready ✔" : "Loading..."}
         </p>
 
-        <p className="text-sm mb-4 font-semibold">
+        <p className="text-sm mb-2 font-semibold">
           Device Status: {deviceStatus}
         </p>
 
+        {saved && (
+          <p className="text-green-600 font-bold mb-2">
+            ✔ Iris Saved to Database
+          </p>
+        )}
+
+        {/* OUTPUT */}
         <div className="bg-black text-green-400 p-3 rounded h-72 overflow-auto text-xs">
           {output
             ? JSON.stringify(output, null, 2)
@@ -116,6 +146,7 @@ export default function IrisAutoDetect() {
             Detecting iris device...
           </p>
         )}
+
       </div>
     </div>
   );
