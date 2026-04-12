@@ -1,116 +1,179 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Script from "next/script";
+import { useState, useEffect, useRef } from "react";
 
-export default function FingerprintTest() {
-  const [output, setOutput] = useState(null);
+const BASE_URL = "http://localhost:5000";
+
+export default function FingerTemplateTest() {
+  const [status, setStatus] = useState("Loading...");
   const [sdkReady, setSdkReady] = useState(false);
-  const [deviceStatus, setDeviceStatus] = useState("Checking...");
-  const [loading, setLoading] = useState(false);
 
-  const log = (data) => {
-    setOutput(data);
-  };
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [templateType, setTemplateType] = useState(0);
 
-  /* 🟢 AUTO INIT + CHECK */
-  const autoDetectDevice = async () => {
-    try {
-      setLoading(true);
+  const [fingerImage, setFingerImage] = useState("");
+  const [template, setTemplate] = useState("");
+  const [busy, setBusy] = useState(false);
 
-      // Wait until SDK is available
-      const waitForSDK = () =>
-        new Promise((resolve) => {
-          const interval = setInterval(() => {
-            if (window.InitDevice && window.IsDeviceConnected) {
-              clearInterval(interval);
-              resolve(true);
-            }
-          }, 200);
-        });
+  const sdkLoadedRef = useRef(false);
 
-      await waitForSDK();
+  // ───────── LOAD SDK ─────────
+  useEffect(() => {
+    if (sdkLoadedRef.current) return;
+    sdkLoadedRef.current = true;
 
-      // 1️⃣ INIT DEVICE
-      const initRes = window.InitDevice("WEB_CLIENT", "12345");
-
-      // 2️⃣ CHECK DEVICE
-      const checkRes = window.IsDeviceConnected("WEB_CLIENT");
-
-      const isConnected =
-        checkRes === true ||
-        checkRes === "true" ||
-        checkRes === 1 ||
-        checkRes === "1";
-
-      setDeviceStatus(isConnected ? "Device Connected ✔" : "Device Not Found ❌");
-
-      log({
-        action: "AUTO DETECT",
-        init: initRes,
-        check: checkRes,
-        status: isConnected
+    const loadScript = (src) =>
+      new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) return resolve();
+        const s = document.createElement("script");
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.body.appendChild(s);
       });
 
-    } catch (err) {
-      setDeviceStatus("Error detecting device ❌");
-      log({ error: err.message });
+    const init = async () => {
+      try {
+        await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
+        await loadScript("/morfinauth.js");
+
+        setSdkReady(true);
+        setStatus("SDK Ready ✔");
+      } catch (e) {
+        setStatus("SDK Load Failed ❌ " + e.message);
+      }
+    };
+
+    init();
+  }, []);
+
+  // ───────── TOKEN ─────────
+  const getToken = () => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("token"); // 🔥 IMPORTANT
+  };
+
+  // ───────── DEVICE ─────────
+  const getDevices = () => {
+    const res = window.GetConnectedDeviceList();
+
+    console.log("DEVICE RESPONSE:", res);
+
+    if (!res?.httpStaus) return setStatus("Device Error ❌");
+    if (res.data.ErrorCode !== "0")
+      return setStatus(res.data.ErrorDescription);
+
+    const device =
+      res.data.ErrorDescription?.split(":")[1]?.split(",")[0];
+
+    setSelectedDevice(device);
+    setStatus("Device Selected ✔");
+  };
+
+  // ───────── INIT ─────────
+  const initDevice = () => {
+    const res = window.InitDevice(selectedDevice, "");
+
+    console.log("INIT RESPONSE:", res);
+
+    if (!res?.httpStaus) return setStatus("Init Failed ❌");
+
+    setStatus("Device Ready ✔");
+  };
+
+  // ───────── CAPTURE ─────────
+  const captureFinger = () => {
+    const res = window.CaptureFinger(60, 10);
+
+    console.log("CAPTURE RESPONSE:", res);
+
+    if (!res?.httpStaus) return setStatus("Capture Failed ❌");
+
+    setFingerImage("data:image/bmp;base64," + res.data.BitmapData);
+
+    setStatus("Captured ✔");
+  };
+
+  // ───────── TEMPLATE ─────────
+  const getTemplate = () => {
+    const res = window.GetTemplate(templateType);
+
+    console.log("TEMPLATE RESPONSE:", res);
+
+    if (!res?.httpStaus) return setStatus("Template Error ❌");
+
+    const tpl =
+      res.data.TemplateData ||
+      res.data.FMRData ||
+      res.data.ImgData;
+
+    if (!tpl) return setStatus("Template Not Found ❌");
+
+    setTemplate(tpl);
+    setStatus("Template Ready ✔");
+  };
+
+  // ───────── SAVE TO BACKEND (FIXED TOKEN) ─────────
+  const saveToDB = async () => {
+    if (!template) return setStatus("No Template ❌");
+
+    const token = getToken();
+    if (!token) return setStatus("Login required ❌ No token");
+
+    setBusy(true);
+    setStatus("Saving...");
+
+    try {
+      const res = await fetch(`${BASE_URL}/users/add-finger`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 🔥 THIS FIXES 401
+        },
+        body: JSON.stringify({
+          template, // MUST MATCH BACKEND
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("BACKEND RESPONSE:", data);
+
+      if (data.success) {
+        setStatus("Saved ✔ Fingerprint stored");
+        setTemplate("");
+        setFingerImage("");
+      } else {
+        setStatus(data.message || "Save Failed ❌");
+      }
+    } catch (e) {
+      setStatus("Error: " + e.message);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
-  /* 🔥 RUN ON LOAD */
-  useEffect(() => {
-    if (sdkReady) {
-      autoDetectDevice();
-    }
-  }, [sdkReady]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+    <div style={{ padding: 20 }}>
+      <h2>Fingerprint LOCAL + BACKEND FIXED</h2>
 
-      {/* jQuery */}
-      <Script
-        src="https://code.jquery.com/jquery-3.6.0.min.js"
-        strategy="beforeInteractive"
-      />
+      <p>SDK: {sdkReady ? "READY ✔" : "LOADING..."}</p>
+      <p>Status: {status}</p>
 
-      {/* SDK */}
-      <Script
-        src="/morfinauth.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          console.log("SDK Loaded ✔");
-          setSdkReady(true);
-        }}
-      />
+      <button onClick={getDevices}>Get Devices</button>
+      <button onClick={initDevice}>Init</button>
+      <button onClick={captureFinger}>Capture</button>
 
-      <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
+      {fingerImage && <img src={fingerImage} width={120} />}
 
-        <h1 className="text-2xl font-bold mb-4">
-          🧬 Fingerprint Auto Detect
-        </h1>
+      <button onClick={getTemplate}>Get Template</button>
 
-        <p className="text-sm mb-2 text-gray-500">
-          SDK: {sdkReady ? "Ready ✔" : "Loading..."}
-        </p>
+      <button onClick={saveToDB} disabled={!template || busy}>
+        {busy ? "Saving..." : "Save to Backend"}
+      </button>
 
-        <p className="text-sm mb-4 font-semibold">
-          Device Status: {deviceStatus}
-        </p>
-
-        {/* OUTPUT */}
-        <div className="bg-black text-green-400 p-3 rounded h-72 overflow-auto text-xs">
-          {output ? JSON.stringify(output, null, 2) : "Waiting for detection..."}
-        </div>
-
-        {loading && (
-          <p className="text-center text-gray-500 mt-2 animate-pulse">
-            Detecting fingerprint device...
-          </p>
-        )}
-
+      <div style={{ fontSize: 10, wordBreak: "break-all" }}>
+        {template?.slice(0, 120)}
       </div>
     </div>
   );

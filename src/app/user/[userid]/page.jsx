@@ -1,36 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import FingerprintTest from "@/app/fingerprint-test";
+import { useRouter } from "next/navigation";
 
-export default function UserDashboard() {
-  const { userid } = useParams();
-  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+export default function UserDashboard({ userid }) {
+  const router = useRouter();
 
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+  const handleLogout = () => {
+    // 🧹 clear storage
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+
+    // 🔁 redirect to login
+    router.push("/login");
+  };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">
-        User Dashboard
-      </h1>
 
-      <div className="mt-4 p-4 bg-gray-100 rounded">
-        <p><b>URL User ID:</b> {userid}</p>
+      <h1 className="text-2xl font-bold">User Dashboard</h1>
 
-        {user && (
-          <>
-            <p><b>Name:</b> {user.name}</p>
-            <p><b>Email:</b> {user.email}</p>
-          </>
-        )}
+      <p className="mt-2">User ID: {userid}</p>
+
+      {/* 🔴 LOGOUT BUTTON */}
+      <button
+        onClick={handleLogout}
+        className="bg-red-500 text-white px-4 py-2 mt-4 rounded"
+      >
+        Logout
+      </button>
+
+      {/* 🧬 FINGERPRINT SECTION */}
+      <div className="mt-6">
+       <FingerprintTest />
       </div>
+
     </div>
   );
 }
