@@ -1,40 +1,41 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import FingerprintTest from "@/app/fingerprint-test/page";
+import { useEffect, useState } from "react";
+import { getUserDetails } from "@/services/userService";
+import FingerprintApp from "@/app/fingerprint-test";
 
 export default function UserDashboard({ userid }) {
-  const router = useRouter();
+  const [user, setUser] = useState(null);
 
-  const handleLogout = () => {
-    // 🧹 clear storage
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
+  useEffect(() => {
+    const loadUser = async () => {
+      const res = await getUserDetails(userid);
 
-    // 🔁 redirect to login
-    router.push("/login");
-  };
+      if (res.success === false) {
+        console.log(res.message);
+      } else {
+        setUser(res);
+      }
+    };
+
+    loadUser();
+  }, [userid]);
 
   return (
-    <div className="p-6">
+    <div style={{ padding: 30 }}>
+      <h2>User Profile Page</h2>
 
-      <h1 className="text-2xl font-bold">User Dashboard</h1>
-
-      <p className="mt-2">User ID: {userid}</p>
-
-      {/* 🔴 LOGOUT BUTTON */}
-      <button
-        onClick={handleLogout}
-        className="bg-red-500 text-white px-4 py-2 mt-4 rounded"
-      >
-        Logout
-      </button>
-
-      {/* 🧬 FINGERPRINT SECTION */}
-      <div className="mt-6">
-        <FingerprintTest />
-      </div>
-
+      {!user ? (
+        <p>Loading...</p>
+      ) : (
+        <div>
+          <p><b>User ID:</b> {user.user_id}</p>
+          <p><b>Name:</b> {user.name}</p>
+          <p><b>Email:</b> {user.email}</p>
+          <p><b>Role:</b> {user.role}</p>
+          <p><b>Status:</b> {user.status}</p>
+        </div>
+      )}
     </div>
   );
 }
