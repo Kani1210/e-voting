@@ -1,6 +1,7 @@
 "use client";
 
-import FingerprintTest from "@/app/fingerprint-test";
+import Fingerprinttest from "@/app/fingerprint-test";
+
 import { useRouter } from "next/navigation";
 
 
@@ -33,7 +34,7 @@ export default function UserDashboard({ userid }) {
 
       {/* 🧬 FINGERPRINT SECTION */}
       <div className="mt-6">
-       <FingerprintTest />
+       <Fingerprinttest />
       </div>
 
     </div>
