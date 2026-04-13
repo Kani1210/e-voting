@@ -1,153 +1,179 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Script from "next/script";
-import { addIris } from "@/services/userService";
+import { useEffect, useRef, useState } from "react";
 
-export default function IrisAutoDetect() {
-  const [output, setOutput] = useState(null);
-  const [sdkReady, setSdkReady] = useState(false);
-  const [deviceStatus, setDeviceStatus] = useState("Checking...");
-  const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+const BASE_URL = "http://localhost:5000";
 
-  const log = (data) => setOutput(data);
+export default function IrisSystem() {
+  const [status, setStatus] = useState("Loading...");
+  const [deviceInfo, setDeviceInfo] = useState(null);
 
-  /* ---------------- WAIT FOR SDK ---------------- */
-  const waitForSDK = () =>
-    new Promise((resolve) => {
-      const interval = setInterval(() => {
-        if (window.GetMarvisAuthInfo) {
-          clearInterval(interval);
-          resolve(true);
-        }
-      }, 200);
-    });
+  const [imageType, setImageType] = useState("1"); // BMP default
+  const [irisImage, setIrisImage] = useState("");
+  const [irisBase64, setIrisBase64] = useState("");
+  const [quality, setQuality] = useState("");
 
-  /* ---------------- IRIS DETECT + SAVE ---------------- */
-  const detectIrisDevice = async () => {
-    try {
-      setLoading(true);
+  const sdkLoaded = useRef(false);
 
-      await waitForSDK();
+  /* ---------------- LOAD SDK ---------------- */
+  useEffect(() => {
+    if (sdkLoaded.current) return;
+    sdkLoaded.current = true;
 
-      const res = window.GetMarvisAuthInfo
-        ? window.GetMarvisAuthInfo()
-        : null;
+    const loadScript = (src) =>
+      new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${src}"]`)) return resolve();
 
-      let data = res;
-
-      if (typeof res === "string") {
-        try {
-          data = JSON.parse(res);
-        } catch {
-          data = { raw: res };
-        }
-      }
-
-      console.log("IRIS RESPONSE:", data);
-
-      const isConnected =
-        data?.httpStaus === true ||
-        data?.ErrorCode === "-2014" ||
-        data?.ErrorDescription?.includes("Initialized");
-
-      setDeviceStatus(
-        isConnected ? "Iris Device Connected ✔" : "Iris Not Found ❌"
-      );
-
-      log({
-        action: "IRIS AUTO DETECT",
-        raw: res,
-        parsed: data,
-        status: isConnected,
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
       });
 
-      /* ---------------- SAVE TO BACKEND ---------------- */
-      if (isConnected) {
-        const userId = localStorage.getItem("userId");
-
-        if (!userId) {
-          console.log("❌ userId not found");
-          return;
-        }
-
-        const response = await addIris({
-          userId: userId,
-          irisTemplate: JSON.stringify(data),
-        });
-
-        console.log("✔ SAVED TO DB:", response);
-        setSaved(true);
+    const init = async () => {
+      try {
+        await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
+        await loadScript("/marvisauth.js"); // put in public folder
+        setStatus("SDK Ready ✔");
+      } catch {
+        setStatus("SDK Load Failed ❌");
       }
-    } catch (err) {
-      setDeviceStatus("Error detecting iris ❌");
-      log({ error: err.message });
-    } finally {
-      setLoading(false);
+    };
+
+    init();
+  }, []);
+
+  /* ---------------- GET DEVICE INFO ---------------- */
+  const getInfo = () => {
+    try {
+      const res = window.GetMarvisAuthInfo();
+
+      if (!res?.httpStaus) {
+        setStatus("Device Error ❌");
+        return;
+      }
+
+      if (res.data.ErrorCode === "0") {
+        setDeviceInfo(res.data.DeviceInfo1);
+        setStatus("Device Connected ✔");
+      } else {
+        setStatus(res.data.ErrorDescription);
+      }
+    } catch (e) {
+      setStatus("SDK Not Ready ❌");
     }
   };
 
-  /* ---------------- AUTO RUN ---------------- */
-  useEffect(() => {
-    if (sdkReady) {
-      detectIrisDevice();
+  /* ---------------- CAPTURE IRIS ---------------- */
+  const captureIris = () => {
+    try {
+      const timeout = 15;
+      const q = 55;
+
+      const res = window.CaptureIris(timeout, q);
+
+      if (!res?.httpStaus) {
+        setStatus("Capture Failed ❌");
+        return;
+      }
+
+      const data = res.data;
+
+      if (data.ErrorCode === "0") {
+        setStatus("Capture Success ✔");
+
+        setIrisBase64(data.BitmapData);
+        setQuality(data.Quality);
+
+        setIrisImage("data:image/bmp;base64," + data.BitmapData);
+      } else {
+        setStatus(data.ErrorDescription);
+      }
+    } catch (e) {
+      setStatus("Error: SDK not ready");
     }
-  }, [sdkReady]);
+  };
 
+  /* ---------------- SAVE TO BACKEND ---------------- */
+  const saveToBackend = async () => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${BASE_URL}/users/iris/add`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        irisTemplate: irisBase64,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      setStatus("Saved to DB ✔");
+    } else {
+      setStatus("Save Failed ❌");
+    }
+  };
+
+  /* ---------------- UI ---------------- */
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-6">
+    <div style={{ padding: 20, fontFamily: "Arial" }}>
+      <h2>👁 IRIS SYSTEM (React + SDK + Local API)</h2>
 
-      {/* SDK LOAD */}
-      <Script
-        src="https://code.jquery.com/jquery-3.6.0.min.js"
-        strategy="beforeInteractive"
-      />
+      <p><b>Status:</b> {status}</p>
 
-      <Script
-        src="/marvisauth.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          console.log("IRIS SDK Loaded ✔");
-          setSdkReady(true);
-        }}
-      />
-
-      {/* UI BOX */}
-      <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
-
-        <h1 className="text-2xl font-bold mb-4">
-          👁 Iris Auto Detect System
-        </h1>
-
-        <p className="text-sm mb-2 text-gray-500">
-          SDK: {sdkReady ? "Ready ✔" : "Loading..."}
-        </p>
-
-        <p className="text-sm mb-2 font-semibold">
-          Device Status: {deviceStatus}
-        </p>
-
-        {saved && (
-          <p className="text-green-600 font-bold mb-2">
-            ✔ Iris Saved to Database
-          </p>
-        )}
-
-        {/* OUTPUT */}
-        <div className="bg-black text-green-400 p-3 rounded h-72 overflow-auto text-xs">
-          {output
-            ? JSON.stringify(output, null, 2)
-            : "Waiting for iris detection..."}
+      {/* DEVICE INFO */}
+      {deviceInfo && (
+        <div style={{ background: "#eee", padding: 10, marginBottom: 10 }}>
+          <p>Serial: {deviceInfo.SerialNo}</p>
+          <p>Make: {deviceInfo.Make}</p>
+          <p>Model: {deviceInfo.Model}</p>
+          <p>Width: {deviceInfo.Width}</p>
+          <p>Height: {deviceInfo.Height}</p>
         </div>
+      )}
 
-        {loading && (
-          <p className="text-center text-gray-500 mt-2 animate-pulse">
-            Detecting iris device...
-          </p>
-        )}
-
+      {/* IMAGE TYPE */}
+      <div style={{ marginBottom: 10 }}>
+        <label>Image Type: </label>
+        <select value={imageType} onChange={(e) => setImageType(e.target.value)}>
+          <option value="1">BMP</option>
+          <option value="2">Raw</option>
+          <option value="3">K3</option>
+          <option value="4">K7</option>
+        </select>
       </div>
+
+      {/* BUTTONS */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <button onClick={getInfo}>Get Info</button>
+        <button onClick={captureIris}>Capture Iris</button>
+        <button onClick={saveToBackend}>Save (Local API)</button>
+      </div>
+
+      {/* QUALITY */}
+      {quality && <p>Quality: {quality}</p>}
+
+      {/* IMAGE */}
+      {irisImage && (
+        <img
+          src={irisImage}
+          alt="iris"
+          width={200}
+          style={{ border: "1px solid #ccc" }}
+        />
+      )}
+
+      {/* BASE64 */}
+      <textarea
+        value={irisBase64}
+        readOnly
+        style={{ width: "100%", height: 120, marginTop: 10 }}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getUserDetails } from "@/services/userService";
 import FingerprintApp from "@/app/fingerprint-test";
+import IrisAutoDetect from "@/app/iris-test";
 
 export default function UserDashboard({ userid }) {
   const [user, setUser] = useState(null);
@@ -34,6 +35,7 @@ export default function UserDashboard({ userid }) {
           <p><b>Email:</b> {user.email}</p>
           <p><b>Role:</b> {user.role}</p>
           <p><b>Status:</b> {user.status}</p>
+          <IrisAutoDetect />
         </div>
       )}
     </div>
