@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Vote } from "lucide-react";
 
-export default function LoginPage() {
+export default function LoginPage1() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
