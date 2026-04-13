@@ -2,11 +2,19 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://e-voting-backend-u9dk.onrender.com";
 
+// 🔐 GET TOKEN
+const getToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
+};
+
 /* =========================
    SAVE FINGERPRINT
 ========================= */
-export const saveFinger = async (template, token) => {
+export const saveFinger = async (template) => {
   try {
+    const token = getToken();
+
     const res = await fetch(`${API_URL}/users/add-finger`, {
       method: "POST",
       headers: {
@@ -16,13 +24,8 @@ export const saveFinger = async (template, token) => {
       body: JSON.stringify({ template }),
     });
 
-    const text = await res.text();
-
-    if (!text) {
-      return { success: false, message: "Empty response from server" };
-    }
-
-    return JSON.parse(text);
+    const data = await res.json();
+    return data;
   } catch (err) {
     return { success: false, message: err.message };
   }
@@ -31,8 +34,10 @@ export const saveFinger = async (template, token) => {
 /* =========================
    GET FINGERPRINT
 ========================= */
-export const getFinger = async (token) => {
+export const getFinger = async () => {
   try {
+    const token = getToken();
+
     const res = await fetch(`${API_URL}/users/get-finger`, {
       method: "GET",
       headers: {
@@ -40,15 +45,19 @@ export const getFinger = async (token) => {
       },
     });
 
-    const text = await res.text();
+    const data = await res.json();
 
-    if (!text) {
-      return { success: false, message: "Empty response from server" };
+    if (!res.ok || !data.success) {
+      return {
+        success: false,
+        message: data.message || "No fingerprint found",
+      };
     }
 
-    const data = JSON.parse(text);
-
-    return data;
+    return {
+      success: true,
+      template: data.template,
+    };
   } catch (err) {
     return { success: false, message: err.message };
   }

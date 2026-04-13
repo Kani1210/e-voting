@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { getFinger, saveFinger } from "@/services/fingerprintService";
 
-const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
+
 
 export default function FingerprintApp() {
   const [status, setStatus] = useState("Loading...");
@@ -14,9 +15,7 @@ export default function FingerprintApp() {
 
   const sdkLoaded = useRef(false);
 
-  const getToken = () => localStorage.getItem("token");
-
-  // LOAD SDK
+  // LOAD SDK (UNCHANGED)
   useEffect(() => {
     if (sdkLoaded.current) return;
     sdkLoaded.current = true;
@@ -44,7 +43,7 @@ export default function FingerprintApp() {
     init();
   }, []);
 
-  // GET DEVICE
+  // GET DEVICE (UNCHANGED)
   const getDevices = () => {
     try {
       const res = window.GetConnectedDeviceList();
@@ -55,7 +54,7 @@ export default function FingerprintApp() {
       }
 
       const raw = res.data.ErrorDescription;
-      const list = raw.split(":")[1].split(",").map(d => d.trim());
+      const list = raw.split(":")[1].split(",").map((d) => d.trim());
 
       setDevices(list);
       setSelectedDevice(list[0]);
@@ -65,7 +64,7 @@ export default function FingerprintApp() {
     }
   };
 
-  // INIT DEVICE
+  // INIT (UNCHANGED)
   const initDevice = () => {
     const res = window.InitDevice(selectedDevice, "");
 
@@ -77,7 +76,7 @@ export default function FingerprintApp() {
     setStatus("Device Ready ✔");
   };
 
-  // CAPTURE
+  // CAPTURE (UNCHANGED)
   const capture = () => {
     const res = window.CaptureFinger(60, 10);
 
@@ -90,7 +89,7 @@ export default function FingerprintApp() {
     setStatus("Captured ✔");
   };
 
-  // GET TEMPLATE
+  // TEMPLATE (UNCHANGED)
   const getTemplate = () => {
     const res = window.GetTemplate(0);
 
@@ -108,63 +107,29 @@ export default function FingerprintApp() {
     setStatus("Template Ready ✔");
   };
 
-  // SAVE
+  // SAVE (ONLY API MOVED)
   const save = async () => {
-    const token = getToken();
+    const data = await saveFinger(template);
 
-    const res = await fetch(`${BASE_URL}/users/add-finger`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ template }),
-    });
-
-    const data = await res.json();
-
-    setStatus(data.success ? "Saved ✔" : "Save Failed ❌");
+    setStatus(data.success ? "Saved ✔" : data.message || "Save Failed ❌");
   };
 
-  // VERIFY (FIXED - FINAL)
-const verify = async () => {
-  const token = localStorage.getItem("token");
+  // VERIFY (ONLY API MOVED)
+  const verify = async () => {
+    const res = await getFinger();
 
-  if (!token) {
-    setStatus("No Token ❌");
-    return;
-  }
-
-  try {
-    // 1. GET STORED TEMPLATE FROM BACKEND
-    const res = await fetch(`${BASE_URL}/users/get-finger`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      setStatus(data.message || "No fingerprint found ❌");
+    if (!res.success) {
+      setStatus(res.message || "No fingerprint found ❌");
       return;
     }
 
-    const storedTemplate = data.template;
+    const storedTemplate = res.template;
 
-    if (!storedTemplate) {
-      setStatus("Stored template empty ❌");
-      return;
-    }
-
-    // 2. USE ALREADY CAPTURED TEMPLATE (FROM SAVE / CURRENT STATE)
     if (!template) {
-      setStatus("No current template to compare ❌");
+      setStatus("No current template ❌");
       return;
     }
 
-    // 3. COMPARE USING SDK
     const match = window.VerifyFinger(template, storedTemplate, 0);
 
     if (match?.httpStaus && match.data?.Status) {
@@ -172,11 +137,8 @@ const verify = async () => {
     } else {
       setStatus("❌ NOT MATCHED");
     }
+  };
 
-  } catch (err) {
-    setStatus("Error: " + err.message);
-  }
-};
   return (
     <div style={{ padding: 20 }}>
       <h2>Fingerprint System</h2>
