@@ -49,15 +49,12 @@ export default function FingerTemplateTest() {
 
   // ───────── TOKEN ─────────
   const getToken = () => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("token"); // 🔥 IMPORTANT
+    return localStorage.getItem("token");
   };
 
   // ───────── DEVICE ─────────
   const getDevices = () => {
     const res = window.GetConnectedDeviceList();
-
-    console.log("DEVICE RESPONSE:", res);
 
     if (!res?.httpStaus) return setStatus("Device Error ❌");
     if (res.data.ErrorCode !== "0")
@@ -73,11 +70,7 @@ export default function FingerTemplateTest() {
   // ───────── INIT ─────────
   const initDevice = () => {
     const res = window.InitDevice(selectedDevice, "");
-
-    console.log("INIT RESPONSE:", res);
-
     if (!res?.httpStaus) return setStatus("Init Failed ❌");
-
     setStatus("Device Ready ✔");
   };
 
@@ -85,20 +78,15 @@ export default function FingerTemplateTest() {
   const captureFinger = () => {
     const res = window.CaptureFinger(60, 10);
 
-    console.log("CAPTURE RESPONSE:", res);
-
     if (!res?.httpStaus) return setStatus("Capture Failed ❌");
 
     setFingerImage("data:image/bmp;base64," + res.data.BitmapData);
-
     setStatus("Captured ✔");
   };
 
   // ───────── TEMPLATE ─────────
   const getTemplate = () => {
     const res = window.GetTemplate(templateType);
-
-    console.log("TEMPLATE RESPONSE:", res);
 
     if (!res?.httpStaus) return setStatus("Template Error ❌");
 
@@ -113,12 +101,12 @@ export default function FingerTemplateTest() {
     setStatus("Template Ready ✔");
   };
 
-  // ───────── SAVE TO BACKEND (FIXED TOKEN) ─────────
+  // ───────── SAVE TO BACKEND ─────────
   const saveToDB = async () => {
     if (!template) return setStatus("No Template ❌");
 
     const token = getToken();
-    if (!token) return setStatus("Login required ❌ No token");
+    if (!token) return setStatus("Login required ❌");
 
     setBusy(true);
     setStatus("Saving...");
@@ -128,16 +116,14 @@ export default function FingerTemplateTest() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // 🔥 THIS FIXES 401
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          template, // MUST MATCH BACKEND
+          template,
         }),
       });
 
       const data = await res.json();
-
-      console.log("BACKEND RESPONSE:", data);
 
       if (data.success) {
         setStatus("Saved ✔ Fingerprint stored");
@@ -153,9 +139,44 @@ export default function FingerTemplateTest() {
     }
   };
 
+  // ───────── VERIFY FINGERPRINT (🔥 NEW) ─────────
+  const verifyFinger = async () => {
+    if (!template) return setStatus("No Template ❌");
+
+    const token = getToken();
+    if (!token) return setStatus("Login required ❌");
+
+    setStatus("Verifying...");
+
+    try {
+      const res = await fetch(`${BASE_URL}/users/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          finger: template,
+        }),
+      });
+
+      const data = await res.json();
+
+      console.log("VERIFY RESPONSE:", data);
+
+      if (data.success) {
+        setStatus("✔ VERIFIED SUCCESS");
+      } else {
+        setStatus("❌ NOT MATCHED");
+      }
+    } catch (e) {
+      setStatus("Error: " + e.message);
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
-      <h2>Fingerprint LOCAL + BACKEND FIXED</h2>
+      <h2>Fingerprint SYSTEM + VERIFY</h2>
 
       <p>SDK: {sdkReady ? "READY ✔" : "LOADING..."}</p>
       <p>Status: {status}</p>
@@ -170,6 +191,11 @@ export default function FingerTemplateTest() {
 
       <button onClick={saveToDB} disabled={!template || busy}>
         {busy ? "Saving..." : "Save to Backend"}
+      </button>
+
+      {/* 🔥 VERIFY BUTTON */}
+      <button onClick={verifyFinger} disabled={!template}>
+        Verify Fingerprint
       </button>
 
       <div style={{ fontSize: 10, wordBreak: "break-all" }}>
