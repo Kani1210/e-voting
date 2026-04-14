@@ -1,21 +1,11 @@
-"use client";
+import React from 'react'
+import AdminDashboard from './AdminDashboard';
 
-import { useEffect, useState } from "react";
+export default async function page({params}) {
 
-export default function AdminPage() {
-  const [user, setUser] = useState(null);
+  const { userid } = await params; // ❌ no await needed
 
-  useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("user"));
+  console.log("🔥 SERVER PARAM USER:", userid);
 
-    if (!u || u.role !== "admin") {
-      window.location.href = "/";
-    } else {
-      setUser(u);
-    }
-  }, []);
-
-  if (!user) return <div>Loading...</div>;
-
-  return <h1>Welcome Admin: {user.name}</h1>;
+  return <AdminDashboard userid={userid} />;
 }
