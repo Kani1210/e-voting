@@ -35,7 +35,7 @@ export default function UserDashboard({ userid }) {
           <p><b>Email:</b> {user.email}</p>
           <p><b>Role:</b> {user.role}</p>
           <p><b>Status:</b> {user.status}</p>
-          <IrisAutoDetect />
+          <FingerprintApp />
         </div>
       )}
     </div>

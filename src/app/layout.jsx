@@ -2,6 +2,7 @@ import Script from "next/script";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import "./globals.css"; 
+import { Toaster } from "sonner";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,7 +23,7 @@ export default function RootLayout({ children }) {
           src="/morfinauth.js"
           strategy="beforeInteractive"
         />
-
+        <Toaster richColors position="top-right" />
         {children}
       </body>
     </html>
