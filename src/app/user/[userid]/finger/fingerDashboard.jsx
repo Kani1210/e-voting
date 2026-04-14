@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation"; // ✅ ADD
+
 import { getFinger, saveFinger } from "@/services/fingerprintService";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-export default function FingerDashboard() {
+export default function FingerDashboard({ userid }) { // ✅ RECEIVE USERID
+
   const [status, setStatus] = useState("Loading...");
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
@@ -23,6 +26,7 @@ export default function FingerDashboard() {
   const [image, setImage] = useState("");
 
   const sdkLoaded = useRef(false);
+  const router = useRouter(); // ✅ ADD ROUTER
 
   useEffect(() => {
     if (sdkLoaded.current) return;
@@ -117,28 +121,33 @@ export default function FingerDashboard() {
     setStatus(data.success ? "Saved ✔" : "Save Failed ❌");
   };
 
+  // ===================== VERIFY (UPDATED) =====================
   const verify = async () => {
     const res = await getFinger();
 
     if (!res.success) {
       setStatus("No Fingerprint ❌");
+      router.push("/finger/verify-user");
       return;
     }
 
     const match = window.VerifyFinger(template, res.template, 0);
 
-    setStatus(
-      match?.httpStaus && match.data?.Status
-        ? "MATCH ✔"
-        : "NO MATCH ❌"
-    );
+    const isMatch = match?.httpStaus && match.data?.Status;
+
+    setStatus(isMatch ? "MATCH ✔" : "NO MATCH ❌");
+
+    // 🚀 NAVIGATE ON MATCH
+    if (isMatch) {
+      router.push("/finger/verify-user");
+    }
   };
 
   return (
     <div className="flex justify-center items-center p-2">
       <div className="w-full max-w-3xl space-y-2">
 
-        {/* HEADER (SMALL) */}
+        {/* HEADER */}
         <Card>
           <CardHeader className="py-2">
             <CardTitle className="text-base">
@@ -148,7 +157,7 @@ export default function FingerDashboard() {
           </CardHeader>
         </Card>
 
-        {/* CONTROLS (COMPACT) */}
+        {/* CONTROLS */}
         <Card>
           <CardContent className="flex flex-wrap gap-2 p-2 items-center">
             <Button size="sm" onClick={getDevices}>Devices</Button>
@@ -180,10 +189,9 @@ export default function FingerDashboard() {
           </CardContent>
         </Card>
 
-        {/* BODY (SMALL HEIGHT) */}
+        {/* BODY */}
         <div className="grid grid-cols-2 gap-2 h-[300px]">
 
-          {/* IMAGE */}
           <Card>
             <CardHeader className="py-1">
               <CardTitle className="text-sm">Scan</CardTitle>
@@ -191,20 +199,14 @@ export default function FingerDashboard() {
             <CardContent>
               <div className="h-[220px] bg-gray-200 rounded flex items-center justify-center overflow-hidden">
                 {image ? (
-                  <img
-                    src={image}
-                    className="w-full h-full object-contain"
-                  />
+                  <img src={image} className="w-full h-full object-contain" />
                 ) : (
-                  <span className="text-gray-400 text-sm">
-                    No Scan
-                  </span>
+                  <span className="text-gray-400 text-sm">No Scan</span>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* TEMPLATE */}
           <Card>
             <CardHeader className="py-1">
               <CardTitle className="text-sm">Template</CardTitle>
