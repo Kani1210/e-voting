@@ -11,7 +11,7 @@ export default function IrisSystem() {
   const [deviceInfo, setDeviceInfo] = useState(null);
   const [irisBase64, setIrisBase64] = useState("");
   const [irisImage, setIrisImage] = useState("");
-  const [quality, setQuality] = useState("");
+  const [quality, setQuality] = useState(0);
 
   /* ---------------- LOAD SDK ---------------- */
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function IrisSystem() {
           return;
         }
 
-        setStatus("SDK Loaded ✅");
+        setStatus("SDK Ready ✅");
       } catch (err) {
         console.error(err);
         setStatus("SDK Load Failed ❌");
@@ -47,16 +47,10 @@ export default function IrisSystem() {
     })();
   }, []);
 
-  /* ---------------- GET DEVICE INFO ---------------- */
+  /* ---------------- DEVICE INFO ---------------- */
   const getInfo = () => {
     try {
-      if (!window.GetMarvisAuthInfo) {
-        setStatus("SDK Not Available ❌");
-        return;
-      }
-
       const res = window.GetMarvisAuthInfo();
-      console.log("DEVICE RESPONSE:", res);
 
       if (res?.data?.ErrorCode === "0") {
         setDeviceInfo(res.data.DeviceInfo1);
@@ -64,24 +58,17 @@ export default function IrisSystem() {
       } else {
         setStatus("Device Not Connected ❌");
       }
-    } catch (err) {
-      console.error(err);
-      setStatus("SDK Error ❌");
+    } catch {
+      setStatus("Device Error ❌");
     }
   };
 
-  /* ---------------- CAPTURE IRIS ---------------- */
+  /* ---------------- CAPTURE ---------------- */
   const captureIris = () => {
     try {
-      if (!window.CaptureIris) {
-        setStatus("Capture Function Missing ❌");
-        return;
-      }
-
-      setStatus("Capturing iris...");
+      setStatus("Capturing...");
 
       const res = window.CaptureIris(15, 55);
-      console.log("CAPTURE RESPONSE:", res);
 
       if (!res?.data || res.data.ErrorCode !== "0") {
         setStatus("Capture Failed ❌");
@@ -89,17 +76,24 @@ export default function IrisSystem() {
       }
 
       const bmpBase64 = res.data.BitmapData;
+      const q = parseInt(res.data.Quality || "0");
 
       if (!bmpBase64) {
-        setStatus("No Image Data ❌");
+        setStatus("No Image ❌");
         return;
       }
 
-      setIrisBase64(bmpBase64); // ✅ RAW BASE64
-      setIrisImage("data:image/bmp;base64," + bmpBase64); // ✅ only for UI
-      setQuality(res.data.Quality);
+      // 🔥 QUALITY CHECK (IMPORTANT)
+      if (q < 60) {
+        setStatus(`Low Quality (${q}) ❌ Retake`);
+        return;
+      }
 
-      setStatus("Capture Success ✅");
+      setIrisBase64(bmpBase64);
+      setIrisImage("data:image/bmp;base64," + bmpBase64);
+      setQuality(q);
+
+      setStatus(`Capture OK ✅ (Quality: ${q})`);
 
       window.UnInit?.();
     } catch (err) {
@@ -113,7 +107,7 @@ export default function IrisSystem() {
     const token = localStorage.getItem("token");
 
     if (!token) return setStatus("Login Required ❌");
-    if (!irisBase64) return setStatus("No iris image ❌");
+    if (!irisBase64) return setStatus("Capture first ❌");
 
     try {
       setStatus("Enrolling...");
@@ -125,21 +119,17 @@ export default function IrisSystem() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          irisImage: irisBase64, // ✅ FIXED (NO PREFIX)
+          irisImage: irisBase64,
         }),
       });
 
       const data = await res.json();
-      console.log("ENROLL RESPONSE:", data);
 
-      if (data.success) {
-        setStatus("Iris Enrolled ✅");
-      } else {
-        setStatus(data.message || data.error || "Enroll Failed ❌");
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus("Enroll Server Error ❌");
+      setStatus(
+        data.success ? "Iris Enrolled ✅" : data.error || "Enroll Failed ❌"
+      );
+    } catch {
+      setStatus("Server Error ❌");
     }
   };
 
@@ -148,7 +138,7 @@ export default function IrisSystem() {
     const token = localStorage.getItem("token");
 
     if (!token) return setStatus("Login Required ❌");
-    if (!irisBase64) return setStatus("No iris image ❌");
+    if (!irisBase64) return setStatus("Capture first ❌");
 
     try {
       setStatus("Verifying...");
@@ -160,21 +150,19 @@ export default function IrisSystem() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          irisImage: irisBase64, // ✅ FIXED (NO PREFIX)
+          irisImage: irisBase64,
         }),
       });
 
       const data = await res.json();
-      console.log("VERIFY RESPONSE:", data);
 
       if (data.verified) {
         setStatus(`✅ Verified (distance: ${data.distance})`);
       } else {
         setStatus(`❌ Not Matched (distance: ${data.distance})`);
       }
-    } catch (err) {
-      console.error(err);
-      setStatus("Verify Server Error ❌");
+    } catch {
+      setStatus("Verify Error ❌");
     }
   };
 
@@ -199,7 +187,7 @@ export default function IrisSystem() {
         <button onClick={verifyIris}>Verify</button>
       </div>
 
-      {quality && <p>Quality: {quality}</p>}
+      <p>Quality: {quality}</p>
 
       {irisImage && (
         <img
@@ -209,12 +197,6 @@ export default function IrisSystem() {
           style={{ border: "1px solid #ccc", marginTop: 10 }}
         />
       )}
-
-      <textarea
-        value={irisBase64}
-        readOnly
-        style={{ width: "100%", height: 120, marginTop: 10 }}
-      />
     </div>
   );
 }
