@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getUserDetails } from "@/services/userService";
-import FingerDashboard from "./finger/fingerDashboard";
 import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import FingerprintApp from "@/app/fingerprint-test";
 
 export default function UserDashboard({ userid }) {
   const [user, setUser] = useState(null);
@@ -60,7 +60,7 @@ export default function UserDashboard({ userid }) {
             {/* FINGERPRINT */}
             <Card className="bg-white/5 border border-pink-500/20 backdrop-blur-md">
               <CardContent className="p-2">
-                <FingerDashboard />
+                <FingerprintApp />
               </CardContent>
             </Card>
 
