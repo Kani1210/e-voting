@@ -19,15 +19,14 @@ export const getUserDetails = async (userId) => {
       },
     });
 
-    const data = await res.json();
-    return data;
+    return await res.json();
   } catch (err) {
     return { success: false, message: err.message };
   }
 };
 
 /* =========================
-   GET ALL USERS (ADMIN)
+   GET ALL USERS
 ========================= */
 export const getAllUsers = async () => {
   const token = localStorage.getItem("token");
@@ -38,6 +37,28 @@ export const getAllUsers = async () => {
       headers: {
         Authorization: `Bearer ${token}`,
       },
+    });
+
+    return await res.json();
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+};
+
+/* =========================
+   ADD USER (IMPORTANT FIX)
+========================= */
+export const addUser = async (payload) => {
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch(`${API_URL}/users/user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
     });
 
     return await res.json();

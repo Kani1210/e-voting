@@ -55,7 +55,7 @@ export default function LoginUI() {
         const role = res.user?.role?.toLowerCase();
 
         setTimeout(() => {
-          if (role === "admin") router.push("/admin");
+          if (role === "admin") router.push(`/admin/${res.user.user_id}`);
           else router.push(`/user/${res.user.user_id}`);
         }, 800);
       } else {
