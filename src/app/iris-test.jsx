@@ -5,15 +5,13 @@ import { useEffect, useRef, useState } from "react";
 const BASE_URL = "http://localhost:5000";
 
 export default function IrisSystem() {
-  const [status, setStatus] = useState("Loading...");
-  const [deviceInfo, setDeviceInfo] = useState(null);
-
-  const [imageType, setImageType] = useState("1"); // BMP default
-  const [irisImage, setIrisImage] = useState("");
-  const [irisBase64, setIrisBase64] = useState("");
-  const [quality, setQuality] = useState("");
-
   const sdkLoaded = useRef(false);
+
+  const [status, setStatus] = useState("Loading SDK...");
+  const [deviceInfo, setDeviceInfo] = useState(null);
+  const [irisBase64, setIrisBase64] = useState("");
+  const [irisImage, setIrisImage] = useState("");
+  const [quality, setQuality] = useState("");
 
   /* ---------------- LOAD SDK ---------------- */
   useEffect(() => {
@@ -27,148 +25,191 @@ export default function IrisSystem() {
         const script = document.createElement("script");
         script.src = src;
         script.onload = resolve;
-        script.onerror = reject;
+        script.onerror = () => reject(`Failed to load ${src}`);
         document.body.appendChild(script);
       });
 
-    const init = async () => {
+    (async () => {
       try {
         await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
-        await loadScript("/marvisauth.js"); // put in public folder
-        setStatus("SDK Ready ✔");
-      } catch {
+        await loadScript("/marvisauth.js");
+
+        if (!window.GetMarvisAuthInfo || !window.CaptureIris) {
+          setStatus("SDK Functions Missing ❌");
+          return;
+        }
+
+        setStatus("SDK Loaded ✅");
+      } catch (err) {
+        console.error(err);
         setStatus("SDK Load Failed ❌");
       }
-    };
-
-    init();
+    })();
   }, []);
 
   /* ---------------- GET DEVICE INFO ---------------- */
   const getInfo = () => {
     try {
-      const res = window.GetMarvisAuthInfo();
-
-      if (!res?.httpStaus) {
-        setStatus("Device Error ❌");
+      if (!window.GetMarvisAuthInfo) {
+        setStatus("SDK Not Available ❌");
         return;
       }
 
-      if (res.data.ErrorCode === "0") {
+      const res = window.GetMarvisAuthInfo();
+      console.log("DEVICE RESPONSE:", res);
+
+      if (res?.data?.ErrorCode === "0") {
         setDeviceInfo(res.data.DeviceInfo1);
-        setStatus("Device Connected ✔");
+        setStatus("Device Connected ✅");
       } else {
-        setStatus(res.data.ErrorDescription);
+        setStatus("Device Not Connected ❌");
       }
-    } catch (e) {
-      setStatus("SDK Not Ready ❌");
+    } catch (err) {
+      console.error(err);
+      setStatus("SDK Error ❌");
     }
   };
 
   /* ---------------- CAPTURE IRIS ---------------- */
   const captureIris = () => {
     try {
-      const timeout = 15;
-      const q = 55;
+      if (!window.CaptureIris) {
+        setStatus("Capture Function Missing ❌");
+        return;
+      }
 
-      const res = window.CaptureIris(timeout, q);
+      setStatus("Capturing iris...");
 
-      if (!res?.httpStaus) {
+      const res = window.CaptureIris(15, 55);
+      console.log("CAPTURE RESPONSE:", res);
+
+      if (!res?.data || res.data.ErrorCode !== "0") {
         setStatus("Capture Failed ❌");
         return;
       }
 
-      const data = res.data;
+      const bmpBase64 = res.data.BitmapData;
 
-      if (data.ErrorCode === "0") {
-        setStatus("Capture Success ✔");
-
-        setIrisBase64(data.BitmapData);
-        setQuality(data.Quality);
-
-        setIrisImage("data:image/bmp;base64," + data.BitmapData);
-      } else {
-        setStatus(data.ErrorDescription);
+      if (!bmpBase64) {
+        setStatus("No Image Data ❌");
+        return;
       }
-    } catch (e) {
-      setStatus("Error: SDK not ready");
+
+      setIrisBase64(bmpBase64); // ✅ RAW BASE64
+      setIrisImage("data:image/bmp;base64," + bmpBase64); // ✅ only for UI
+      setQuality(res.data.Quality);
+
+      setStatus("Capture Success ✅");
+
+      window.UnInit?.();
+    } catch (err) {
+      console.error(err);
+      setStatus("Capture Error ❌");
     }
   };
 
-  /* ---------------- SAVE TO BACKEND ---------------- */
-  const saveToBackend = async () => {
+  /* ---------------- ENROLL ---------------- */
+  const enrollIris = async () => {
     const token = localStorage.getItem("token");
 
-    const res = await fetch(`${BASE_URL}/users/iris/add`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        irisTemplate: irisBase64,
-      }),
-    });
+    if (!token) return setStatus("Login Required ❌");
+    if (!irisBase64) return setStatus("No iris image ❌");
 
-    const data = await res.json();
+    try {
+      setStatus("Enrolling...");
 
-    if (data.success) {
-      setStatus("Saved to DB ✔");
-    } else {
-      setStatus("Save Failed ❌");
+      const res = await fetch(`${BASE_URL}/iris/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          irisImage: irisBase64, // ✅ FIXED (NO PREFIX)
+        }),
+      });
+
+      const data = await res.json();
+      console.log("ENROLL RESPONSE:", data);
+
+      if (data.success) {
+        setStatus("Iris Enrolled ✅");
+      } else {
+        setStatus(data.message || data.error || "Enroll Failed ❌");
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("Enroll Server Error ❌");
+    }
+  };
+
+  /* ---------------- VERIFY ---------------- */
+  const verifyIris = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) return setStatus("Login Required ❌");
+    if (!irisBase64) return setStatus("No iris image ❌");
+
+    try {
+      setStatus("Verifying...");
+
+      const res = await fetch(`${BASE_URL}/iris/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          irisImage: irisBase64, // ✅ FIXED (NO PREFIX)
+        }),
+      });
+
+      const data = await res.json();
+      console.log("VERIFY RESPONSE:", data);
+
+      if (data.verified) {
+        setStatus(`✅ Verified (distance: ${data.distance})`);
+      } else {
+        setStatus(`❌ Not Matched (distance: ${data.distance})`);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("Verify Server Error ❌");
     }
   };
 
   /* ---------------- UI ---------------- */
   return (
-    <div style={{ padding: 20, fontFamily: "Arial" }}>
-      <h2>👁 IRIS SYSTEM (React + SDK + Local API)</h2>
+    <div style={{ padding: 20 }}>
+      <h2>👁 Iris System</h2>
 
       <p><b>Status:</b> {status}</p>
 
-      {/* DEVICE INFO */}
       {deviceInfo && (
-        <div style={{ background: "#eee", padding: 10, marginBottom: 10 }}>
+        <div style={{ background: "#eee", padding: 10 }}>
           <p>Serial: {deviceInfo.SerialNo}</p>
-          <p>Make: {deviceInfo.Make}</p>
           <p>Model: {deviceInfo.Model}</p>
-          <p>Width: {deviceInfo.Width}</p>
-          <p>Height: {deviceInfo.Height}</p>
         </div>
       )}
 
-      {/* IMAGE TYPE */}
-      <div style={{ marginBottom: 10 }}>
-        <label>Image Type: </label>
-        <select value={imageType} onChange={(e) => setImageType(e.target.value)}>
-          <option value="1">BMP</option>
-          <option value="2">Raw</option>
-          <option value="3">K3</option>
-          <option value="4">K7</option>
-        </select>
-      </div>
-
-      {/* BUTTONS */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+      <div style={{ marginTop: 10 }}>
         <button onClick={getInfo}>Get Info</button>
-        <button onClick={captureIris}>Capture Iris</button>
-        <button onClick={saveToBackend}>Save (Local API)</button>
+        <button onClick={captureIris}>Capture</button>
+        <button onClick={enrollIris}>Enroll</button>
+        <button onClick={verifyIris}>Verify</button>
       </div>
 
-      {/* QUALITY */}
       {quality && <p>Quality: {quality}</p>}
 
-      {/* IMAGE */}
       {irisImage && (
         <img
           src={irisImage}
-          alt="iris"
           width={200}
-          style={{ border: "1px solid #ccc" }}
+          alt="iris"
+          style={{ border: "1px solid #ccc", marginTop: 10 }}
         />
       )}
 
-      {/* BASE64 */}
       <textarea
         value={irisBase64}
         readOnly
