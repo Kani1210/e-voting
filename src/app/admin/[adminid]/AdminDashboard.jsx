@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import AddVoter from "./AddVotes";
 import AddCandidate from "./AddCandidate";
+import RegisterForm from "@/components/RegisterForm";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -138,7 +139,7 @@ export default function AdminDashboard() {
 
           {/* ================= VOTER ================= */}
           <TabsContent value="voter" className="mt-6">
-            <AddVoter />
+            <RegisterForm />
           </TabsContent>
 
           {/* ================= CANDIDATE ================= */}
