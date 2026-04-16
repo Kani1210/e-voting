@@ -17,7 +17,7 @@ export const getUserDetails = async (userId) => {
   }
 
   try {
-    const res = await fetch(`${API_URL}/user/${userId}`, {
+    const res = await fetch(`${API_URL}/${userId}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
