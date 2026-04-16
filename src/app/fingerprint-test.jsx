@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getFinger, saveFinger } from "@/services/fingerprintService";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+const BASE_URL = "http://localhost:5000";
 
 export default function FingerprintApp() {
   const [status, setStatus] = useState("Loading...");
@@ -18,6 +13,8 @@ export default function FingerprintApp() {
   const [image, setImage] = useState("");
 
   const sdkLoaded = useRef(false);
+
+  const getToken = () => localStorage.getItem("token");
 
   // LOAD SDK
   useEffect(() => {
@@ -47,7 +44,7 @@ export default function FingerprintApp() {
     init();
   }, []);
 
-  // DEVICE
+  // GET DEVICE
   const getDevices = () => {
     try {
       const res = window.GetConnectedDeviceList();
@@ -58,7 +55,7 @@ export default function FingerprintApp() {
       }
 
       const raw = res.data.ErrorDescription;
-      const list = raw.split(":")[1].split(",").map((d) => d.trim());
+      const list = raw.split(":")[1].split(",").map(d => d.trim());
 
       setDevices(list);
       setSelectedDevice(list[0]);
@@ -68,6 +65,7 @@ export default function FingerprintApp() {
     }
   };
 
+  // INIT DEVICE
   const initDevice = () => {
     const res = window.InitDevice(selectedDevice, "");
 
@@ -79,6 +77,7 @@ export default function FingerprintApp() {
     setStatus("Device Ready ✔");
   };
 
+  // CAPTURE
   const capture = () => {
     const res = window.CaptureFinger(60, 10);
 
@@ -91,6 +90,7 @@ export default function FingerprintApp() {
     setStatus("Captured ✔");
   };
 
+  // GET TEMPLATE
   const getTemplate = () => {
     const res = window.GetTemplate(0);
 
@@ -108,112 +108,105 @@ export default function FingerprintApp() {
     setStatus("Template Ready ✔");
   };
 
+  // SAVE
   const save = async () => {
-    const data = await saveFinger(template);
-    setStatus(data.success ? "Saved ✔" : data.message || "Save Failed ❌");
+    const token = getToken();
+
+    const res = await fetch(`${BASE_URL}/users/add-finger`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ template }),
+    });
+
+    const data = await res.json();
+
+    setStatus(data.success ? "Saved ✔" : "Save Failed ❌");
   };
 
-  const verify = async () => {
-    const res = await getFinger();
+  // VERIFY (FIXED - FINAL)
+const verify = async () => {
+  const token = localStorage.getItem("token");
 
-    if (!res.success) {
-      setStatus(res.message || "No fingerprint found ❌");
+  if (!token) {
+    setStatus("No Token ❌");
+    return;
+  }
+
+  try {
+    // 1. GET STORED TEMPLATE FROM BACKEND
+    const res = await fetch(`${BASE_URL}/users/get-finger`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      setStatus(data.message || "No fingerprint found ❌");
       return;
     }
 
-    const storedTemplate = res.template;
+    const storedTemplate = data.template;
 
+    if (!storedTemplate) {
+      setStatus("Stored template empty ❌");
+      return;
+    }
+
+    // 2. USE ALREADY CAPTURED TEMPLATE (FROM SAVE / CURRENT STATE)
     if (!template) {
-      setStatus("No current template ❌");
+      setStatus("No current template to compare ❌");
       return;
     }
 
+    // 3. COMPARE USING SDK
     const match = window.VerifyFinger(template, storedTemplate, 0);
 
     if (match?.httpStaus && match.data?.Status) {
-      setStatus("MATCH SUCCESS ✔");
+      setStatus("✔ MATCH SUCCESS");
     } else {
-      setStatus("NOT MATCHED ❌");
+      setStatus("❌ NOT MATCHED");
     }
-  };
 
+  } catch (err) {
+    setStatus("Error: " + err.message);
+  }
+};
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex justify-center">
-      <div className="w-full max-w-4xl space-y-6">
+    <div style={{ padding: 20 }}>
+      <h2>Fingerprint System</h2>
 
-        {/* HEADER */}
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">Fingerprint System</CardTitle>
-            <Badge variant="outline">{status}</Badge>
-          </CardHeader>
-        </Card>
+      <p>Status: {status}</p>
 
-        {/* DEVICE CONTROLS */}
-        <Card>
-          <CardContent className="flex flex-wrap gap-3 items-center p-4">
-            <Button onClick={getDevices}>Get Devices</Button>
+      <button onClick={getDevices}>Get Devices</button>
 
-            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Select Device" />
-              </SelectTrigger>
-              <SelectContent>
-                {devices.map((d, i) => (
-                  <SelectItem key={i} value={d}>
-                    {d}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <select
+        value={selectedDevice}
+        onChange={(e) => setSelectedDevice(e.target.value)}
+      >
+        {devices.map((d, i) => (
+          <option key={i}>{d}</option>
+        ))}
+      </select>
 
-            <Button onClick={initDevice} variant="secondary">Init</Button>
-            <Button onClick={capture}>Capture</Button>
-            <Button onClick={getTemplate} variant="outline">Template</Button>
-            <Button onClick={save} className="bg-green-600">Save</Button>
-            <Button onClick={verify} className="bg-blue-600">Verify</Button>
-          </CardContent>
-        </Card>
+      <button onClick={initDevice}>Init</button>
+      <button onClick={capture}>Capture</button>
+      <button onClick={getTemplate}>Get Template</button>
+      <button onClick={save}>Save</button>
+      <button onClick={verify}>Verify</button>
 
-        {/* MAIN VIEW */}
-        <div className="grid md:grid-cols-2 gap-6">
+      {image && <img src={image} width={120} />}
 
-          {/* IMAGE PREVIEW BOX */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Fingerprint Scan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="w-full h-[250px] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden">
-                {image ? (
-                  <img
-                    src={image}
-                    alt="fingerprint"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-gray-500">No Scan Yet</span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* TEMPLATE BOX */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Template Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={template}
-                readOnly
-                className="h-[250px] resize-none"
-              />
-            </CardContent>
-          </Card>
-
-        </div>
-      </div>
+      <textarea
+        value={template}
+        readOnly
+        style={{ width: "100%", marginTop: 10 }}
+      />
     </div>
   );
 }
