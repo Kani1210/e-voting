@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 const BASE_URL = "http://localhost:5000";
 
 
-export default function IrisSystem() {
+export default function IrisSystemVerify() {
   const sdkLoaded = useRef(false);
   const router = useRouter();
 
