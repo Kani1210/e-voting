@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import FingerprintApp from "@/app/fingerprint-test";
+import IrisSystem from "@/app/iris-test";
 
 export default function UserDashboard({ userid }) {
   const [user, setUser] = useState(null);
@@ -62,6 +63,7 @@ export default function UserDashboard({ userid }) {
             <Card className="">
               <CardContent className="p-2">
                 <FingerprintApp/>
+                <IrisSystem/>
               </CardContent>
             </Card>
 

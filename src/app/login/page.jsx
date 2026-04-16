@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { User, ShieldCheck, CreditCard, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/services/authService";
-
+import { sendOtp } from "@/services/otpService";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,10 +26,34 @@ export default function LoginUI() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (tab === "voter" && (!form.voterId || !form.email)) {
+
+  // ================= VOTER LOGIN (OTP) =================
+  if (tab === "voter") {
+    if (!form.voterId || !form.email) {
       toast.error("Enter Voter ID and Email");
       return;
     }
+
+    setLoading(true);
+
+    try {
+      const res = await sendOtp(form.email);
+
+      if (res.success) {
+        toast.success("OTP sent successfully!");
+
+        router.push(`/otp?email=${form.email}&voterId=${form.voterId}`);
+      } else {
+        toast.error(res.message || "Failed to send OTP");
+      }
+    } catch (err) {
+      toast.error("Server error. Try again.");
+    }
+
+    setLoading(false);
+    return; // stop here
+  }
+
 
     if (tab === "admin" && (!form.email || !form.password)) {
       toast.error("Enter Email and Password");

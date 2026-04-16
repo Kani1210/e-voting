@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 const BASE_URL = "http://localhost:5000";
 
 
-export default function IrisSystemVerify() {
+export default function IrisSystem() {
   const sdkLoaded = useRef(false);
   const router = useRouter();
 
@@ -172,7 +172,8 @@ export default function IrisSystemVerify() {
       if (data.verified) {
         setStatus(`✅ Verified (distance: ${data.distance})`);
         setTimeout(() => {
-          router.push("/verifypage"); // Redirect to voting page after successful verification  
+          setStatus("Redirecting to voting page...");
+          // Redirect to voting page after successful verification
         },1000);
       } else {
         setStatus(`❌ Not Matched (distance: ${data.distance})`);
@@ -222,4 +223,4 @@ export default function IrisSystemVerify() {
       />
     </div>
   );
-}
+} 

@@ -7,12 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddVoter from "./AddVotes";
 import AddCandidate from "./AddCandidate";
 import RegisterForm from "@/components/RegisterForm";
+import ViewusersDashboard from "./ViewusersDashboard";
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ userid }) {
   const router = useRouter();
-  const { userid } = useParams();
-
-  const handleLogout = () => {
+   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
     localStorage.removeItem("userid");
@@ -47,7 +46,7 @@ export default function AdminDashboard() {
 
         <Tabs defaultValue="dashboard" className="w-full">
 
-          {/* ================= TAB BAR (MODERN RECTANGLE STYLE) ================= */}
+          {/* ================= TAB LIST ================= */}
           <TabsList className="flex h-11 w-fit p-1 rounded-none bg-[#0a0a12] border border-white/10 overflow-hidden">
 
             <TabsTrigger
@@ -98,6 +97,23 @@ export default function AdminDashboard() {
               Add Candidate
             </TabsTrigger>
 
+            {/* ✅ NEW TAB */}
+            <TabsTrigger
+              value="voterlist"
+              className="
+                px-6 h-9 rounded-none text-sm font-medium
+                text-gray-300 transition-all duration-200
+                hover:bg-white/10 hover:text-white
+
+                data-[state=active]:text-white
+                data-[state=active]:bg-gradient-to-r
+                data-[state=active]:from-green-600
+                data-[state=active]:to-emerald-600
+              "
+            >
+              Voter List
+            </TabsTrigger>
+
           </TabsList>
 
           {/* ================= DASHBOARD ================= */}
@@ -145,6 +161,11 @@ export default function AdminDashboard() {
           {/* ================= CANDIDATE ================= */}
           <TabsContent value="candidate" className="mt-6">
             <AddCandidate />
+          </TabsContent>
+
+          {/* ================= VOTER LIST (NEW) ================= */}
+          <TabsContent value="voterlist" className="mt-6">
+            <ViewusersDashboard />
           </TabsContent>
 
         </Tabs>

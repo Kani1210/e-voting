@@ -171,10 +171,9 @@ export default function IrisSystem() {
 
       if (data.verified) {
         setStatus(`✅ Verified (distance: ${data.distance})`);
-        setTimeout(() => {
-          router.push("/verifypage"); // Redirect to voting page after successful verification  
-        },1000);
+        
       } else {
+        
         setStatus(`❌ Not Matched (distance: ${data.distance})`);
       }
     } catch (err) {

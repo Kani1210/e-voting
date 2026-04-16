@@ -11,7 +11,7 @@ export const sendOtp = async (email) => {
   }
 
   try {
-    const res = await fetch(`${API_URL}/otp/send`, {
+    const res = await fetch(`${API_URL}/otp/send-otp`, { // ✅ FIXED
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -19,42 +19,16 @@ export const sendOtp = async (email) => {
       body: JSON.stringify({ email }),
     });
 
-    const text = await res.text();
-
-    console.log("SEND OTP RAW:", text);
-
-    if (!text || text.trim() === "") {
-      return {
-        success: false,
-        message: "Empty response from server",
-      };
-    }
-
-    if (text.startsWith("<!DOCTYPE")) {
-      return {
-        success: false,
-        message: "Server error (HTML response)",
-      };
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      return {
-        success: false,
-        message: "Invalid JSON response",
-      };
-    }
+    const data = await res.json();
 
     if (!res.ok) {
       return {
         success: false,
-        message: json.message || "Failed to send OTP",
+        message: data.message || data.error || "Failed to send OTP",
       };
     }
 
-    return json;
+    return data;
   } catch (err) {
     return {
       success: false,
@@ -72,7 +46,7 @@ export const verifyOtp = async (email, otp) => {
   }
 
   try {
-    const res = await fetch(`${API_URL}/otp/verify`, {
+    const res = await fetch(`${API_URL}/otp/verify-otp`, { // ✅ FIXED
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -80,42 +54,16 @@ export const verifyOtp = async (email, otp) => {
       body: JSON.stringify({ email, otp }),
     });
 
-    const text = await res.text();
-
-    console.log("VERIFY OTP RAW:", text);
-
-    if (!text || text.trim() === "") {
-      return {
-        success: false,
-        message: "Empty response from server",
-      };
-    }
-
-    if (text.startsWith("<!DOCTYPE")) {
-      return {
-        success: false,
-        message: "Server error (HTML response)",
-      };
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      return {
-        success: false,
-        message: "Invalid JSON response",
-      };
-    }
+    const data = await res.json();
 
     if (!res.ok) {
       return {
         success: false,
-        message: json.message || "Failed to verify OTP",
+        message: data.message || data.error || "Failed to verify OTP",
       };
     }
 
-    return json;
+    return data;
   } catch (err) {
     return {
       success: false,
