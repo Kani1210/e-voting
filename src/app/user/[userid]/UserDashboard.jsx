@@ -59,7 +59,7 @@ export default function UserDashboard({ userid }) {
             </Card>
 
             {/* FINGERPRINT */}
-            <Card className="bg-white/5 border border-pink-500/20 backdrop-blur-md">
+            <Card className="">
               <CardContent className="p-2">
                 <FingerprintApp/>
               </CardContent>
