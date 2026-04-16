@@ -62,6 +62,7 @@ export default function UserDashboard({ userid }) {
             <Card className="">
               <CardContent className="p-2">
                <IrisSystem />
+               <FingerprintApp />
               </CardContent>
             </Card>
 
