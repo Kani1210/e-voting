@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
 export default function FingerprintApp() {
   const [status, setStatus] = useState("Loading...");
