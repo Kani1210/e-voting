@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
 const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
 export default function FingerprintApp() {
@@ -177,36 +181,103 @@ const verify = async () => {
     setStatus("Error: " + err.message);
   }
 };
-  return (
-    <div style={{ padding: 20 }}>
-      <h2>Fingerprint System</h2>
+ return (
+  <div className="flex justify-center items-center p-2">
+    <div className="w-full max-w-3xl space-y-2">
 
-      <p>Status: {status}</p>
+      {/* HEADER */}
+      <Card>
+        <CardHeader className="py-2">
+          <CardTitle className="text-base">
+            Fingerprint System
+          </CardTitle>
+          <Badge variant="outline">{status}</Badge>
+        </CardHeader>
+      </Card>
 
-      <button onClick={getDevices}>Get Devices</button>
+      {/* CONTROLS */}
+      <Card>
+        <CardContent className="flex flex-wrap gap-2 p-2 items-center">
 
-      <select
-        value={selectedDevice}
-        onChange={(e) => setSelectedDevice(e.target.value)}
-      >
-        {devices.map((d, i) => (
-          <option key={i}>{d}</option>
-        ))}
-      </select>
+          <Button size="sm" onClick={getDevices}>
+            Devices
+          </Button>
 
-      <button onClick={initDevice}>Init</button>
-      <button onClick={capture}>Capture</button>
-      <button onClick={getTemplate}>Get Template</button>
-      <button onClick={save}>Save</button>
-      <button onClick={verify}>Verify</button>
+          <select
+            className="border rounded px-2 py-1 text-sm"
+            value={selectedDevice}
+            onChange={(e) => setSelectedDevice(e.target.value)}
+          >
+            {devices.map((d, i) => (
+              <option key={i} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
 
-      {image && <img src={image} width={120} />}
+          <Button size="sm" onClick={initDevice}>
+            Init
+          </Button>
 
-      <textarea
-        value={template}
-        readOnly
-        style={{ width: "100%", marginTop: 10 }}
-      />
+          <Button size="sm" onClick={capture}>
+            Capture
+          </Button>
+
+          <Button size="sm" variant="outline" onClick={getTemplate}>
+            Temp
+          </Button>
+
+          <Button size="sm" className="bg-green-600" onClick={save}>
+            Save
+          </Button>
+
+          <Button size="sm" className="bg-blue-600" onClick={verify}>
+            Verify
+          </Button>
+
+        </CardContent>
+      </Card>
+
+      {/* BODY */}
+      <div className="grid grid-cols-2 gap-2 h-[300px]">
+
+        {/* IMAGE */}
+        <Card>
+          <CardHeader className="py-1">
+            <CardTitle className="text-sm">Scan</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px] bg-gray-200 rounded flex items-center justify-center overflow-hidden">
+              {image ? (
+                <img
+                  src={image}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <span className="text-gray-400 text-sm">
+                  No Scan
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* TEMPLATE */}
+        <Card>
+          <CardHeader className="py-1">
+            <CardTitle className="text-sm">Template</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <textarea
+              value={template}
+              readOnly
+              className="w-full h-[220px] text-xs border rounded p-2"
+            />
+          </CardContent>
+        </Card>
+
+      </div>
     </div>
-  );
+  </div>
+);
 }
