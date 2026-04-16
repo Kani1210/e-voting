@@ -3,91 +3,68 @@ const API_URL =
   "https://e-voting-backend-u9dk.onrender.com";
 
 /* =========================
-   ADD USER
+   GET USER DETAILS
 ========================= */
-export const addUser = async (payload) => {
+export const getUserDetails = async (userId) => {
   const token = localStorage.getItem("token");
 
+  if (!userId) {
+    return { success: false, message: "UserId is missing" };
+  }
+
   if (!token) {
-    return { success: false, message: "Token missing" };
+    return { success: false, message: "No token found" };
   }
 
   try {
-    const res = await fetch(`${API_URL}/users`, {
-      method: "POST",
+    const res = await fetch(`${API_URL}/users/user/${userId}`, {
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
     });
 
-    return await res.json();
+    const text = await res.text();
+
+    console.log("USER DETAILS RAW:", text);
+
+    if (!text || text.trim() === "") {
+      return {
+        success: false,
+        message: "Empty response from server",
+      };
+    }
+
+    if (text.startsWith("<!DOCTYPE")) {
+      return {
+        success: false,
+        message: "Server error (HTML response)",
+      };
+    }
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      return {
+        success: false,
+        message: "Invalid JSON response",
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        success: false,
+        message: json.message || "Failed to fetch user",
+      };
+    }
+
+    return json;
   } catch (err) {
-    return { success: false, message: err.message };
+    return {
+      success: false,
+      message: "Network error: " + err.message,
+    };
   }
-};
-
-/* =========================
-   GET ALL USERS
-========================= */
-export const getAllUsers = async () => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/users`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  return res.json();
-};
-
-/* =========================
-   GET USER
-========================= */
-export const getUserDetails = async (id) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/users/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  return res.json();
-};
-
-/* =========================
-   UPDATE USER
-========================= */
-export const updateUser = async (id, payload) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/users/${id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  return res.json();
-};
-
-/* =========================
-   DELETE USER
-========================= */
-export const deleteUser = async (id) => {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_URL}/users/${id}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  return res.json();
 };
