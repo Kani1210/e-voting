@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
-export default function OtpPage() {
+export default function OtpClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 

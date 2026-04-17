@@ -1,10 +1,11 @@
 import { Suspense } from "react";
-import OtpPage from "./OtpClient ";
+
+import OtpClient from "./OtpClient ";
 
 export default function Page() {
   return (
     <Suspense fallback={<div>Loading OTP page...</div>}>
-      <OtpPage />
+      <OtpClient />
     </Suspense>
   );
 }
