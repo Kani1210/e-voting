@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
 export default function FingerprintDashboard() {
   const [status, setStatus] = useState("Loading...");
