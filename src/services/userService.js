@@ -2,193 +2,103 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://e-voting-backend-u9dk.onrender.com";
 
-/* =========================
-   GET USER DETAILS
-========================= */
-export const getUserDetails = async (userId) => {
-  const token = localStorage.getItem("token");
-
-  if (!userId) return { success: false, message: "UserId missing" };
-  if (!token) return { success: false, message: "Token missing" };
-
-  try {
-    const res = await fetch(`${API_URL}/users/user/${userId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+// SAFE TOKEN
+const getToken = () => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("token");
 };
 
-/* =========================
-   GET ALL USERS
-========================= */
+// ================= GET ALL USERS =================
 export const getAllUsers = async () => {
-  const token = localStorage.getItem("token");
-
   try {
-    const res = await fetch(`${API_URL}/users/users`, {
+    const res = await fetch(`${API_URL}/users`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return { success: false, message: data.message };
+    }
+
+    return data;
+  } catch (err) {
+    return { success: false, message: "Network error" };
+  }
+};
+
+// ================= GET USER =================
+export const getUserDetails = async (id) => {
+  try {
+    const res = await fetch(`${API_URL}/users/${id}`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${getToken()}`,
       },
     });
 
-    return await res.json();
+    const data = await res.json();
+
+    console.log("API RESPONSE:", data);
+
+    if (!res.ok) {
+      return {
+        success: false,
+        message: data.message || "Request failed",
+      };
+    }
+
+    return data;
   } catch (err) {
-    return { success: false, message: err.message };
+    return {
+      success: false,
+      message: "Network error",
+    };
   }
 };
 
-/* =========================
-   ADD USER (IMPORTANT FIX)
-========================= */
-export const addUser = async (payload) => {
-  const token = localStorage.getItem("token");
+// ================= UPDATE USER =================
+export const updateUser = async (id, payload) => {
+  const res = await fetch(`${API_URL}/users/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(payload),
+  });
 
-  try {
-    const res = await fetch(`${API_URL}/users/user`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+  return await res.json();
 };
 
-/* =========================
-   UPDATE USER
-========================= */
-export const updateUser = async (userId, payload) => {
-  const token = localStorage.getItem("token");
+// ================= DELETE USER =================
+export const deleteUser = async (id) => {
+  const res = await fetch(`${API_URL}/users/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
 
-  try {
-    const res = await fetch(`${API_URL}/users/user/${userId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+  return await res.json();
 };
 
-/* =========================
-   DELETE USER
-========================= */
-export const deleteUser = async (userId) => {
-  const token = localStorage.getItem("token");
-
-  try {
-    const res = await fetch(`${API_URL}/users/user/${userId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-};
-
-/* =========================
-   SAVE FINGERPRINT
-========================= */
+// ================= FINGERPRINT =================
 export const saveFingerprint = async (template) => {
-  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_URL}/users/add-finger`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ template }),
+  });
 
-  try {
-    const res = await fetch(`${API_URL}/users/add-finger`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ template }),
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+  return await res.json();
 };
 
-/* =========================
-   GET FINGERPRINT
-========================= */
 export const getFingerprint = async () => {
-  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_URL}/users/get-finger`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
 
-  try {
-    const res = await fetch(`${API_URL}/users/get-finger`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-};
-
-/* =========================
-   SAVE IRIS
-========================= */
-export const saveIris = async (data) => {
-  const token = localStorage.getItem("token");
-
-  try {
-    const res = await fetch(`${API_URL}/users/iris/add`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-};
-
-/* =========================
-   GET IRIS
-========================= */
-export const getIris = async () => {
-  const token = localStorage.getItem("token");
-
-  try {
-    const res = await fetch(`${API_URL}/users/iris/verify`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    return await res.json();
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
+  return await res.json();
 };

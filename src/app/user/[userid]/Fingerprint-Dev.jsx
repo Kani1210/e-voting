@@ -9,8 +9,11 @@ import { useSearchParams } from "next/navigation";
 
 const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
-export default function FingerprintDashboard({userid}) {
+export default function FingerprintDev() {
 
+     const searchParams = useSearchParams();
+
+  const userid = searchParams.get("userid");
 
   const [status, setStatus] = useState("Loading...");
   const [devices, setDevices] = useState([]);
@@ -185,14 +188,14 @@ const verify = async () => {
   }
 };
  return (
-  <div className="mt-12 flex justify-center items-center p-2">
+  <div className="flex justify-center items-center p-2">
     <div className="w-full max-w-3xl space-y-2">
 
       {/* HEADER */}
       <Card>
         <CardHeader className="py-2">
           <CardTitle className="text-base">
-            Fingerprint System - User {userid}
+            Fingerprint System
           </CardTitle>
           <Badge variant="outline">{status}</Badge>
         </CardHeader>

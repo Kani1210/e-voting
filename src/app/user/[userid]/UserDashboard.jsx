@@ -1,74 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getUserDetails } from "@/services/userService";
-import FingerDashboard from "./finger/fingerDashboard";
-import { Spinner } from "@/components/ui/spinner";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import FingerprintApp from "@/app/fingerprint-test";
-import IrisSystem from "@/app/iris-test";
+import { Button } from "@/components/ui/button";
+import { Fingerprint, Eye } from "lucide-react";
 
 export default function UserDashboard({ userid }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const loadUser = async () => {
-      const res = await getUserDetails(userid);
-
-      console.log("USER API RESPONSE:", res);
-
-      if (res) {
-        setUser(res);
-      }
-    };
-
-    loadUser();
-  }, [userid]);
+  const router = useRouter();
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-black via-pink-950 to-black flex justify-center p-4 pt-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-6">
 
-      <div className="w-full max-w-3xl space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
 
-        {/* LOADING */}
-        {!user ? (
-          <div className="h-[60vh] flex flex-col items-center justify-center gap-2 text-white">
-            <Spinner className="h-6 w-6" />
-          </div>
-        ) : (
-          <>
-            {/* USER CARD */}
-            <Card className="bg-pink-950/40 border border-pink-500/30 backdrop-blur-md shadow-lg">
-              <CardContent className="flex items-center justify-between p-4 text-white">
+        {/* FINGERPRINT CARD */}
+        <Card className="rounded-2xl shadow-xl border hover:shadow-2xl transition-all duration-300 bg-white">
+          <CardContent className="p-8 text-center space-y-6">
 
-                <div>
-                  <p className="text-[10px] text-pink-200">ID</p>
-                  <p className="text-sm font-semibold">{user.user_id}</p>
-                </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 rounded-full bg-blue-100">
+                <Fingerprint className="w-10 h-10 text-blue-600" />
+              </div>
 
-                <div>
-                  <p className="text-[10px] text-pink-200">NAME</p>
-                  <p className="text-sm font-semibold">{user.name}</p>
-                </div>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Fingerprint Authentication
+              </h2>
 
-                <Badge className="bg-pink-600 text-white text-xs px-2 py-0.5">
-                  ACTIVE
-                </Badge>
+              <p className="text-gray-500 text-sm">
+                Scan and verify your fingerprint securely
+              </p>
+            </div>
 
-              </CardContent>
-            </Card>
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg rounded-xl"
+              onClick={() => router.push(`/user/${userid}/finger`)}
+            >
+              Open Fingerprint
+            </Button>
 
-            {/* FINGERPRINT */}
-            <Card className="">
-              <CardContent className="p-2">
-                <FingerprintApp/>
-                <IrisSystem/>
-              </CardContent>
-            </Card>
+          </CardContent>
+        </Card>
 
-          </>
-        )}
+        {/* IRIS CARD */}
+        <Card className="rounded-2xl shadow-xl border hover:shadow-2xl transition-all duration-300 bg-white">
+          <CardContent className="p-8 text-center space-y-6">
+
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-4 rounded-full bg-purple-100">
+                <Eye className="w-10 h-10 text-purple-600" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-800">
+                Iris Authentication
+              </h2>
+
+              <p className="text-gray-500 text-sm">
+                Capture and verify iris for identity check
+              </p>
+            </div>
+
+            <Button
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-lg rounded-xl"
+              onClick={() => router.push(`/user/${userid}/iris`)}
+            >
+              Open Iris
+            </Button>
+
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

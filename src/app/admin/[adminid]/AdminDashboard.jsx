@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import AddVoter from "./AddVotes";
+
 import AddCandidate from "./AddCandidate";
 import RegisterForm from "@/components/RegisterForm";
 import ViewusersDashboard from "./ViewusersDashboard";
