@@ -5,13 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useSearchParams } from "next/navigation";
 
-const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
+const BASE_URL = "http://localhost:5000";
 
-export default function FingerprintDashboard({userid}) {
-
-
+export default function FingerprintDashboard() {
   const [status, setStatus] = useState("Loading...");
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");
@@ -119,7 +116,7 @@ export default function FingerprintDashboard({userid}) {
   const save = async () => {
     const token = getToken();
 
-    const res = await fetch(`${BASE_URL}/users/add-finger`, {
+    const res = await fetch(`${BASE_URL}/fingerprint/add`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -144,7 +141,7 @@ const verify = async () => {
 
   try {
     // 1. GET STORED TEMPLATE FROM BACKEND
-    const res = await fetch(`${BASE_URL}/users/get-finger`, {
+    const res = await fetch(`${BASE_URL}/fingerprint/get`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -185,14 +182,14 @@ const verify = async () => {
   }
 };
  return (
-  <div className="mt-12 flex justify-center items-center p-2">
+  <div className="flex justify-center items-center p-2">
     <div className="w-full max-w-3xl space-y-2">
 
       {/* HEADER */}
       <Card>
         <CardHeader className="py-2">
           <CardTitle className="text-base">
-            Fingerprint System - User {userid}
+            Fingerprint System
           </CardTitle>
           <Badge variant="outline">{status}</Badge>
         </CardHeader>

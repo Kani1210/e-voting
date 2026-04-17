@@ -15,7 +15,7 @@ export const saveFinger = async (template) => {
   try {
     const token = getToken();
 
-    const res = await fetch(`${API_URL}/users/add-finger`, {
+    const res = await fetch(`${API_URL}/fingerprint/add-finger`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -38,7 +38,7 @@ export const getFinger = async () => {
   try {
     const token = getToken();
 
-    const res = await fetch(`${API_URL}/users/get-finger`, {
+    const res = await fetch(`${API_URL}/fingerprint/get-finger`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
