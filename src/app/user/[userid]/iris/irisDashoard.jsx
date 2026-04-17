@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 const BASE_URL = "http://localhost:5000";
 
@@ -16,6 +13,9 @@ export default function IrisDashboard({ userid }) {
   const [irisImage, setIrisImage] = useState("");
   const [quality, setQuality] = useState("");
 
+  const getToken = () => localStorage.getItem("token");
+
+  /* ================= LOAD SDK ================= */
   useEffect(() => {
     if (sdkLoaded.current) return;
     sdkLoaded.current = true;
@@ -23,6 +23,7 @@ export default function IrisDashboard({ userid }) {
     const loadScript = (src) =>
       new Promise((resolve, reject) => {
         if (document.querySelector(`script[src="${src}"]`)) return resolve();
+
         const script = document.createElement("script");
         script.src = src;
         script.onload = resolve;
@@ -34,155 +35,148 @@ export default function IrisDashboard({ userid }) {
       try {
         await loadScript("https://code.jquery.com/jquery-3.6.0.min.js");
         await loadScript("/marvisauth.js");
+
         setStatus("SDK Loaded ✔");
-      } catch {
+      } catch (err) {
         setStatus("SDK Load Failed ❌");
       }
     })();
   }, []);
 
+  /* ================= GET DEVICE ================= */
   const getInfo = () => {
-    const res = window.GetMarvisAuthInfo();
+    try {
+      const res = window.GetMarvisAuthInfo();
 
-    if (res?.data?.ErrorCode === "0") {
-      setDeviceInfo(res.data.DeviceInfo1);
-      setStatus("Device Connected ✔");
-    } else {
-      setStatus("Device Not Connected ❌");
+      if (res?.data?.ErrorCode === "0") {
+        setDeviceInfo(res.data.DeviceInfo1);
+        setStatus("Device Connected ✔");
+      } else {
+        setStatus("Device Not Connected ❌");
+      }
+    } catch (err) {
+      setStatus("SDK Error ❌");
     }
   };
 
+  /* ================= CAPTURE IRIS ================= */
   const captureIris = () => {
-    const res = window.CaptureIris(15, 55);
+    try {
+      setStatus("Capturing...");
 
-    if (!res?.data || res.data.ErrorCode !== "0") {
-      setStatus("Capture Failed ❌");
-      return;
+      const res = window.CaptureIris(15, 55);
+
+      if (!res?.data || res.data.ErrorCode !== "0") {
+        setStatus("Capture Failed ❌");
+        return;
+      }
+
+      const bmp = res.data.BitmapData;
+
+      setIrisBase64(bmp);
+      setIrisImage("data:image/bmp;base64," + bmp);
+      setQuality(res.data.Quality);
+
+      setStatus("Captured ✔");
+    } catch (err) {
+      console.error(err);
+      setStatus("Capture Error ❌");
     }
-
-    const bmpBase64 = res.data.BitmapData;
-
-    setIrisBase64(bmpBase64);
-    setIrisImage("data:image/bmp;base64," + bmpBase64);
-    setQuality(res.data.Quality);
-
-    setStatus("Capture Success ✔");
   };
 
+  /* ================= ENROLL (FIXED SAFE) ================= */
   const enrollIris = async () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
-    const res = await fetch(`${BASE_URL}/iris/add`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ irisImage: irisBase64 }),
-    });
+    if (!token) return setStatus("Login Required ❌");
+    if (!irisBase64) return setStatus("No Iris Captured ❌");
 
-    const data = await res.json();
-    setStatus(data.success ? "Enrolled ✔" : "Enroll Failed ❌");
+    try {
+      setStatus("Enrolling...");
+
+      const res = await fetch(`${BASE_URL}/iris/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          irisImage: irisBase64,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setStatus("Iris Enrolled ✔");
+      } else {
+        setStatus(data.message || data.error || "Enroll Failed ❌");
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("Backend Not Reachable ❌");
+    }
   };
 
+  /* ================= VERIFY ================= */
   const verifyIris = async () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
-    const res = await fetch(`${BASE_URL}/iris/verify`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ irisImage: irisBase64 }),
-    });
+    if (!token) return setStatus("Login Required ❌");
+    if (!irisBase64) return setStatus("No Iris Captured ❌");
 
-    const data = await res.json();
+    try {
+      setStatus("Verifying...");
 
-    setStatus(
-      data.verified
-        ? `✔ Verified (distance: ${data.distance})`
-        : `❌ Not Matched (distance: ${data.distance})`
-    );
+      const res = await fetch(`${BASE_URL}/iris/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          irisImage: irisBase64,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success || data.verified) {
+        setStatus("✔ Verified");
+      } else {
+        setStatus("❌ Not Matched");
+      }
+    } catch (err) {
+      setStatus("Verify Error ❌");
+    }
   };
 
   return (
-    <div className="mt-12 flex justify-center items-center p-2">
-      <div className="w-full max-w-3xl space-y-2">
+    <div style={{ padding: 20 }}>
+      <h2>👁 Iris System - User {userid}</h2>
 
-        {/* HEADER */}
-        <Card>
-          <CardHeader className="py-2">
-            <CardTitle className="text-base">
-              Iris System - User {userid}
-            </CardTitle>
-            <Badge variant="outline">{status}</Badge>
-          </CardHeader>
-        </Card>
+      <p><b>Status:</b> {status}</p>
 
-        {/* CONTROLS */}
-        <Card>
-          <CardContent className="flex flex-wrap gap-2 p-2 items-center">
-
-            <Button size="sm" onClick={getInfo}>
-              Device Info
-            </Button>
-
-            <Button size="sm" onClick={captureIris}>
-              Capture
-            </Button>
-
-            <Button size="sm" className="bg-green-600" onClick={enrollIris}>
-              Enroll
-            </Button>
-
-            <Button size="sm" className="bg-blue-600" onClick={verifyIris}>
-              Verify
-            </Button>
-
-          </CardContent>
-        </Card>
-
-        {/* BODY */}
-        <div className="grid grid-cols-2 gap-2 h-[300px]">
-
-          {/* IMAGE */}
-          <Card>
-            <CardHeader className="py-1">
-              <CardTitle className="text-sm">Scan</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[220px] bg-gray-200 rounded flex items-center justify-center overflow-hidden">
-                {irisImage ? (
-                  <img
-                    src={irisImage}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-gray-400 text-sm">
-                    No Scan
-                  </span>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* DATA */}
-          <Card>
-            <CardHeader className="py-1">
-              <CardTitle className="text-sm">Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                value={irisBase64}
-                readOnly
-                className="w-full h-[220px] text-xs border rounded p-2"
-              />
-            </CardContent>
-          </Card>
-
+      {deviceInfo && (
+        <div style={{ background: "#eee", padding: 10 }}>
+          <p>Device Connected</p>
         </div>
+      )}
+
+      <div style={{ marginTop: 10 }}>
+        <button onClick={getInfo}>Get Info</button>
+        <button onClick={captureIris}>Capture</button>
+        <button onClick={enrollIris}>Enroll</button>
+        <button onClick={verifyIris}>Verify</button>
       </div>
+
+      {quality && <p>Quality: {quality}</p>}
+
+      {irisImage && (
+        <img src={irisImage} width={200} alt="iris" />
+      )}
+
+      <textarea value={irisBase64} readOnly style={{ width: "100%", height: 120 }} />
     </div>
   );
 }
