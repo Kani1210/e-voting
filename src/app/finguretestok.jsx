@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
-export default function FingerprintApp() {
+export default function FingerprintApp1() {
   const [status, setStatus] = useState("Loading...");
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState("");

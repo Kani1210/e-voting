@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Loader2, Fingerprint } from "lucide-react";
 
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
-export default function FingerTemplateTest() {
+export default function FingerTemplateTest1() {
   const [status, setStatus] = useState("Loading...");
   const [sdkReady, setSdkReady] = useState(false);
 

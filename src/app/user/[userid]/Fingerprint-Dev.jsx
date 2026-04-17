@@ -6,7 +6,7 @@
 // import { Button } from "@/components/ui/button";
 // import { Badge } from "@/components/ui/badge";
 
-// const BASE_URL = "http://localhost:5000";
+// const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
 
 // export default function FingerprintDev() {
 //   const [status, setStatus] = useState("Loading...");
