@@ -78,9 +78,11 @@ export default function LoginUI() {
 
         const role = res.user?.role?.toLowerCase();
 
+         const userId = res.user?.id;
+
         setTimeout(() => {
-          if (role === "admin") router.push(`/admin/${res.user.user_id}`);
-          else router.push(`/user/${res.user.user_id}`);
+          if (role === "admin") router.push(`/admin/${userId}`);
+          else router.push(`/user/${userId}`);
         }, 800);
       } else {
         toast.error(res.message || "Login failed");
