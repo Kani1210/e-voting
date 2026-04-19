@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 
-const BASE_URL = "https://e-voting-backend-u9dk.onrender.com";
+const BASE_URL = "http://localhost:5000"; // Change to your backend URL
 
 export default function FingerprintDashboard({ userid }) {
   const [status, setStatus] = useState("Loading...");
