@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 
 // ✅ FIXED: Use same render backend URL (not localhost)
-const BASE_URL = "https://e-voting-backend-u9dk.onrender.com"; // Change to your backend URL
+const BASE_URL = "http://localhost:5000"; // Change to your backend URL
 
 export default function IrisDashboard({ userid }) {
   const router = useRouter();
