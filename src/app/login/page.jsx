@@ -9,13 +9,21 @@ import { sendOtp } from "@/services/otpService";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export default function LoginUI() {
   const [tab, setTab] = useState("voter");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [lockedOpen, setLockedOpen] = useState(false); // 🔒 locked popup
 
   const [form, setForm] = useState({
     voterId: "",
@@ -27,63 +35,57 @@ export default function LoginUI() {
 
   const handleLogin = async () => {
 
-  // ================= VOTER LOGIN (OTP) =================
-  if (tab === "voter") {
-    if (!form.voterId || !form.email) {
-      toast.error("Enter Voter ID and Email");
+    // ── VOTER LOGIN ──
+    if (tab === "voter") {
+      if (!form.voterId || !form.email) {
+        toast.error("Enter Voter ID and Email");
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await sendOtp(form.email);
+
+        if (res.success) {
+          toast.success("OTP sent successfully!");
+          router.push(`/otp?email=${form.email}&voterId=${form.voterId}`);
+
+        } else if (res.isLocked) {
+          // 🔒 SHOW LOCKED POPUP
+          setLockedOpen(true);
+
+        } else {
+          toast.error(res.message || "Failed to send OTP");
+        }
+      } catch (err) {
+        toast.error("Server error. Try again.");
+      }
+
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const res = await sendOtp(form.email);
-
-      if (res.success) {
-        toast.success("OTP sent successfully!");
-
-        router.push(`/otp?email=${form.email}&voterId=${form.voterId}`);
-      } else {
-        toast.error(res.message || "Failed to send OTP");
-      }
-    } catch (err) {
-      toast.error("Server error. Try again.");
-    }
-
-    setLoading(false);
-    return; // stop here
-  }
-
-
-    if (tab === "admin" && (!form.email || !form.password)) {
+    // ── ADMIN LOGIN ──
+    if (!form.email || !form.password) {
       toast.error("Enter Email and Password");
       return;
     }
 
     setLoading(true);
 
-    const payload =
-      tab === "voter"
-        ? { voterId: form.voterId, email: form.email }
-        : { email: form.email, password: form.password };
-
     try {
-      const res = await loginUser(payload);
+      const res = await loginUser({ email: form.email, password: form.password });
 
       if (res.success) {
         toast.success("Login successful!");
-
         localStorage.setItem("user", JSON.stringify(res.user));
         localStorage.setItem("token", res.token);
 
         const role = res.user?.role?.toLowerCase();
+        const userId = res.user?.id;
 
-         const userId = res.user?.id;
-
-        setTimeout(() => {
-          if (role === "admin") router.push(`/admin/${userId}`);
-          else router.push(`/user/${userId}`);
-        }, 800);
+        window.location.href = role === "admin" ? `/admin/${userId}` : `/user/${userId}`;
       } else {
         toast.error(res.message || "Login failed");
       }
@@ -105,7 +107,6 @@ export default function LoginUI() {
         <Card className="rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/20 shadow-2xl text-white">
           <CardContent className="p-8">
 
-            {/* TITLE */}
             <h1 className="text-4xl font-extrabold text-center text-purple-300">
               SECUREVOTE
             </h1>
@@ -119,21 +120,16 @@ export default function LoginUI() {
                 type="button"
                 onClick={() => setTab("voter")}
                 className={`flex-1 py-2 rounded-full ${
-                  tab === "voter"
-                    ? "bg-purple-500 text-white"
-                    : "text-gray-300"
+                  tab === "voter" ? "bg-purple-500 text-white" : "text-gray-300"
                 }`}
               >
                 Voter Login
               </button>
-
               <button
                 type="button"
                 onClick={() => setTab("admin")}
                 className={`flex-1 py-2 rounded-full ${
-                  tab === "admin"
-                    ? "bg-purple-500 text-white"
-                    : "text-gray-300"
+                  tab === "admin" ? "bg-purple-500 text-white" : "text-gray-300"
                 }`}
               >
                 Admin Login
@@ -142,7 +138,6 @@ export default function LoginUI() {
 
             {/* INPUTS */}
             <div className="space-y-4">
-
               {tab === "voter" ? (
                 <>
                   <div className="flex items-center gap-3 bg-white/10 rounded-full px-4 py-3">
@@ -150,21 +145,16 @@ export default function LoginUI() {
                     <Input
                       placeholder="Voter ID"
                       value={form.voterId}
-                      onChange={(e) =>
-                        setForm({ ...form, voterId: e.target.value })
-                      }
+                      onChange={(e) => setForm({ ...form, voterId: e.target.value })}
                       className="bg-transparent border-none text-white w-full"
                     />
                   </div>
-
                   <div className="flex items-center gap-3 bg-white/10 rounded-full px-4 py-3">
                     <User className="text-purple-300" />
                     <Input
                       placeholder="Email"
                       value={form.email}
-                      onChange={(e) =>
-                        setForm({ ...form, email: e.target.value })
-                      }
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
                       className="bg-transparent border-none text-white w-full"
                     />
                   </div>
@@ -176,26 +166,19 @@ export default function LoginUI() {
                     <Input
                       placeholder="Email"
                       value={form.email}
-                      onChange={(e) =>
-                        setForm({ ...form, email: e.target.value })
-                      }
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
                       className="bg-transparent border-none text-white w-full"
                     />
                   </div>
-
                   <div className="flex items-center gap-3 bg-white/10 rounded-full px-4 py-3">
                     <ShieldCheck className="text-purple-300" />
-
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Password"
                       value={form.password}
-                      onChange={(e) =>
-                        setForm({ ...form, password: e.target.value })
-                      }
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
                       className="bg-transparent border-none text-white w-full"
                     />
-
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -208,7 +191,7 @@ export default function LoginUI() {
               )}
             </div>
 
-            {/* BUTTON */}
+            {/* LOGIN BUTTON */}
             <Button
               onClick={handleLogin}
               disabled={loading}
@@ -227,6 +210,35 @@ export default function LoginUI() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* 🔒 LOCKED POPUP */}
+      <Dialog open={lockedOpen} onOpenChange={() => {}}>
+        <DialogContent className="bg-[#1f1f3a] text-white border border-white/20 rounded-2xl text-center">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-yellow-400 text-center">
+              🔒 Account Locked
+            </DialogTitle>
+            <DialogDescription className="text-gray-300 text-center mt-2">
+              Your Voter ID has <strong>already been used</strong> to cast a vote
+              in this election.
+              <br /><br />
+              Your account is <span className="text-red-400 font-bold">locked</span>.
+              <br />
+              Contact the Election Commission to unlock your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-6xl py-4">🚫</div>
+          <DialogFooter>
+            <Button
+              className="w-full bg-purple-600 hover:bg-purple-700 rounded-full"
+              onClick={() => setLockedOpen(false)}
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
