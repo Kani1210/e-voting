@@ -1,7 +1,4 @@
 const nextConfig = {
-  experimental: {
-    turbopack: false,
-  },
   async rewrites() {
     return [
       {
