@@ -27,7 +27,7 @@ const safeFetch = async (url, options = {}) => {
     if (!res.ok) {
       return {
         success: false,
-        message: data.message || `HTTP Error ${res.status}`,
+        message: data.message || data.error || `HTTP Error ${res.status}`,
         status: res.status,
       };
     }
@@ -46,6 +46,15 @@ export const getAllUsers = async () => {
   return await safeFetch(`${API_URL}/users`, {
     method: "GET",
     headers: getAuthHeaders(),
+  });
+};
+
+// ================= ADD USER =================
+export const addUser = async (payload) => {
+  return await safeFetch(`${API_URL}/users`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
   });
 };
 
@@ -78,6 +87,14 @@ export const updateUser = async (id, payload) => {
 export const deleteUser = async (id) => {
   return await safeFetch(`${API_URL}/users/${id}`, {
     method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+};
+
+// ================= UNLOCK USER =================
+export const unlockUser = async (id) => {
+  return await safeFetch(`${API_URL}/users/unlock/${id}`, {
+    method: "PUT",
     headers: getAuthHeaders(),
   });
 };
